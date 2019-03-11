@@ -2,13 +2,9 @@
 
 namespace Crm\PaymentsModule\Presenters;
 
-use Crm\ApplicationModule\Cache\CacheRepository;
 use Crm\ApplicationModule\Components\Graphs\SmallBarGraphControlFactoryInterface;
 use Crm\ApplicationModule\Components\VisualPaginator;
 use Crm\ApplicationModule\DataProvider\DataProviderManager;
-use Crm\ApplicationModule\Graphs\Criteria;
-use Crm\ApplicationModule\Graphs\GraphData;
-use Crm\ApplicationModule\Graphs\GraphDataItem;
 use Crm\AdminModule\Presenters\AdminPresenter;
 use Crm\PaymentsModule\Components\ChangePaymentStatusFactoryInterface;
 use Crm\PaymentsModule\Components\GiftCouponsFactoryInterface;
