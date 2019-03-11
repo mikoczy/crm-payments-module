@@ -8,6 +8,7 @@ use Crm\ApiModule\Authorization\ApiAuthorizationInterface;
 use Crm\ApiModule\Params\InputParam;
 use Crm\ApiModule\Params\ParamsProcessor;
 use Crm\PaymentsModule\Repository\PaymentsRepository;
+use Nette\Database\Table\ActiveRow;
 use Nette\Http\Response;
 
 class ListPaymentsHandler extends ApiHandler
@@ -24,7 +25,7 @@ class ListPaymentsHandler extends ApiHandler
     {
         return [
             new InputParam(
-                InputParam::TYPE_POST,
+                InputParam::TYPE_GET,
                 'sales_funnel_url_key',
                 InputParam::REQUIRED
             )
@@ -46,9 +47,28 @@ class ListPaymentsHandler extends ApiHandler
             return $response;
         }
 
-        $data = $this->paymentsRepository->findBySalesFunnelUrlKey($params['sales_funnel_url_key'])
-            ->select('payments.*, :payment_meta.* AS meta')
-            ->fetchAssoc('id');
+        $payments = $this->paymentsRepository->findBySalesFunnelUrlKey($params['sales_funnel_url_key'])
+            ->select('payments.*')
+            ->where('payments.status = "paid"')
+            ->order('payments.created_at DESC');
+
+        $data = [];
+
+        /** @var $payment ActiveRow */
+        foreach ($payments as $payment) {
+            $data[$payment->id] = [
+                'amount' => $payment->amount,
+                'additional_amount' => $payment->additional_amount,
+                'subscription_type_id' => $payment->subscription_type_id,
+                'created_at' => $payment->created_at,
+                'modified_at' => $payment->modified_at,
+                'meta' => [],
+            ];
+
+            foreach ($payment->related('payment_meta.payment_id') as $paymentMeta) {
+                $data[$payment->id]['meta'][$paymentMeta->key] = $paymentMeta->value;
+            }
+        }
 
         $response = new JsonResponse([
             'status' => 'ok',
