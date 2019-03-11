@@ -25,7 +25,7 @@ class ListPaymentsHandler extends ApiHandler
     {
         return [
             new InputParam(
-                InputParam::TYPE_GET,
+                InputParam::TYPE_POST,
                 'sales_funnel_url_key',
                 InputParam::REQUIRED
             )
