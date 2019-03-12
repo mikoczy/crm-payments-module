@@ -50,24 +50,22 @@ class ListPaymentsHandler extends ApiHandler
         $payments = $this->paymentsRepository->findBySalesFunnelUrlKey($params['sales_funnel_url_key'])
             ->select('payments.*')
             ->where('payments.status = "paid"')
-            ->order('payments.created_at DESC');
+            ->order('payments.created_at ASC');
 
         $data = [];
 
         /** @var $payment ActiveRow */
         foreach ($payments as $payment) {
-            $data[$payment->id] = [
+            $item = [
                 'amount' => $payment->amount,
-                'additional_amount' => $payment->additional_amount,
-                'subscription_type_id' => $payment->subscription_type_id,
-                'created_at' => $payment->created_at,
-                'modified_at' => $payment->modified_at,
                 'meta' => [],
             ];
 
             foreach ($payment->related('payment_meta.payment_id') as $paymentMeta) {
-                $data[$payment->id]['meta'][$paymentMeta->key] = $paymentMeta->value;
+                $item['meta'][$paymentMeta->key] = $paymentMeta->value;
             }
+
+            $data[] = $item;
         }
 
         $response = new JsonResponse([
