@@ -35,14 +35,14 @@ class RecurrentPaymentCriteria implements CriteriaInterface
         ];
     }
 
-    public function join(ParamsBag $paramBag): string
+    public function join(ParamsBag $params): string
     {
         $where = [];
 
-        if ($paramBag->has('active_recurrent')) {
-            if ($paramBag->boolean('active_recurrent')->isTrue()) {
+        if ($params->has('active_recurrent')) {
+            if ($params->boolean('active_recurrent')->isTrue()) {
                 $where[] = " recurrent_payments.id IS NOT NULL AND recurrent_payments.state = 'active' ";
-            } elseif ($paramBag->boolean('active_recurrent')->isFalse()) {
+            } elseif ($params->boolean('active_recurrent')->isFalse()) {
                 $where[] = ' recurrent_payments.id IS NULL';
             }
         }

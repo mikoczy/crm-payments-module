@@ -31,6 +31,7 @@ use Crm\PaymentsModule\DataProvider\FilterGiftedSubscriptionsDataProvider;
 use Crm\PaymentsModule\DataProvider\PaymentFromVariableSymbolDataProvider;
 use Crm\PaymentsModule\DataProvider\SubscriptionsWithActiveUnchargedRecurrentEndingWithinPeriodDataProvider;
 use Crm\PaymentsModule\DataProvider\SubscriptionsWithoutExtensionEndingWithinPeriodDataProvider;
+use Crm\PaymentsModule\MailConfirmation\ParsedMailLogsRepository;
 use Crm\PaymentsModule\Repository\PaymentsRepository;
 use Crm\PaymentsModule\Seeders\ConfigsSeeder;
 use Crm\PaymentsModule\Seeders\PaymentGatewaysSeeder;
@@ -45,10 +46,21 @@ class PaymentsModule extends CrmModule
 {
     private $paymentsRepository;
 
-    public function __construct(Container $container, Translator $translator, PaymentsRepository $paymentsRepository)
-    {
+    private $parsedMailLogsRepository;
+
+    private $paymentsHistogramFactory;
+
+    public function __construct(
+        Container $container,
+        Translator $translator,
+        PaymentsRepository $paymentsRepository,
+        ParsedMailLogsRepository $parsedMailLogsRepository,
+        PaymentsHistogramFactory $paymentsHistogramFactory
+    ) {
         parent::__construct($container, $translator);
         $this->paymentsRepository = $paymentsRepository;
+        $this->parsedMailLogsRepository = $parsedMailLogsRepository;
+        $this->paymentsHistogramFactory = $paymentsHistogramFactory;
     }
 
     public function registerAdminMenuItems(MenuContainerInterface $menuContainer)
@@ -237,6 +249,7 @@ class PaymentsModule extends CrmModule
     public function registerSegmentCriteria(CriteriaStorage $criteriaStorage)
     {
         $criteriaStorage->register('users', 'payment', $this->getInstance(\Crm\PaymentsModule\Segment\PaymentCriteria::class));
+        $criteriaStorage->register('users', 'payment_counts', $this->getInstance(\Crm\PaymentsModule\Segment\PaymentCountsCriteria::class));
         $criteriaStorage->register('users', 'recurrent_payment', $this->getInstance(\Crm\PaymentsModule\Segment\RecurrentPaymentCriteria::class));
 
         $criteriaStorage->register('payments', 'amount', $this->getInstance(\Crm\PaymentsModule\Segment\AmountCriteria::class));
@@ -309,8 +322,9 @@ class PaymentsModule extends CrmModule
     public function cache(OutputInterface $output, array $tags = [])
     {
         if (in_array('precalc', $tags, true)) {
-            $output->writeln("<info>Refreshing payment stats cache</info>");
+            $output->writeln('  * Refreshing <info>payment stats</info> cache');
 
+            $this->paymentsRepository->totalCount(true, true);
             $this->paymentsRepository->totalAmountSum(true, true);
             $this->paymentsRepository->freeSubscribersCount(true, true);
             $this->paymentsRepository->paidSubscribersCount(true, true);
@@ -318,6 +332,20 @@ class PaymentsModule extends CrmModule
             $this->paymentsRepository->subscriptionsWithoutExtensionEndingNextMonthCount(true);
             $this->paymentsRepository->subscriptionsWithActiveUnchargedRecurrentEndingNextTwoWeeksCount(true);
             $this->paymentsRepository->subscriptionsWithActiveUnchargedRecurrentEndingNextMonthCount(true);
+
+            $cachedPaymentStatusHistograms = [
+                PaymentsRepository::STATUS_FORM,
+                PaymentsRepository::STATUS_PAID,
+                PaymentsRepository::STATUS_FAIL,
+                PaymentsRepository::STATUS_TIMEOUT,
+                PaymentsRepository::STATUS_REFUND,
+            ];
+
+            foreach ($cachedPaymentStatusHistograms as $status) {
+                $this->paymentsHistogramFactory->paymentsLastMonthDailyHistogram($status, true);
+            }
+
+            $this->parsedMailLogsRepository->formPaymentsWithWrongAmount(true);
         }
     }
 }

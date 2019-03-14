@@ -379,10 +379,10 @@ class PaymentsRepository extends Repository
         };
 
         if ($allowCached) {
-            return $this->cacheRepository->loadByKeyAndUpdate(
+            return $this->cacheRepository->loadAndUpdate(
                 'payments_paid_sum',
                 $callable,
-                \Nette\Utils\DateTime::from('-10 minutes'),
+                \Nette\Utils\DateTime::from(CacheRepository::REFRESH_TIME_5_MINUTES),
                 $forceCacheUpdate
             );
         }
@@ -435,6 +435,22 @@ class PaymentsRepository extends Repository
         }
     }
 
+    public function totalCount($allowCached = false, $forceCacheUpdate = false)
+    {
+        $callable = function () {
+            return parent::totalCount();
+        };
+        if ($allowCached) {
+            return $this->cacheRepository->loadAndUpdate(
+                'payments_count',
+                $callable,
+                \Nette\Utils\DateTime::from(CacheRepository::REFRESH_TIME_5_MINUTES),
+                $forceCacheUpdate
+            );
+        }
+        return $callable();
+    }
+
     public function paidSubscribersCount($allowCached = false, $forceCacheUpdate = false)
     {
         $callable = function () {
@@ -444,7 +460,7 @@ class PaymentsRepository extends Repository
         };
 
         if ($allowCached) {
-            return $this->cacheRepository->loadByKeyAndUpdate(
+            return $this->cacheRepository->loadAndUpdate(
                 'paid_subscribers_count',
                 $callable,
                 \Nette\Utils\DateTime::from('-1 hour'),
@@ -473,7 +489,7 @@ class PaymentsRepository extends Repository
         };
 
         if ($allowCached) {
-            return $this->cacheRepository->loadByKeyAndUpdate(
+            return $this->cacheRepository->loadAndUpdate(
                 'free_subscribers_count',
                 $callable,
                 \Nette\Utils\DateTime::from('-1 hour'),
@@ -523,10 +539,10 @@ class PaymentsRepository extends Repository
             )->count('*');
         };
 
-        return $this->cacheRepository->loadByKeyAndUpdate(
+        return $this->cacheRepository->loadAndUpdate(
             'subscriptions_with_active_uncharged_recurrent_ending_next_two_weeks_count',
             $callable,
-            \Nette\Utils\DateTime::from('-10 minutes'),
+            \Nette\Utils\DateTime::from(CacheRepository::REFRESH_TIME_5_MINUTES),
             $forceCacheUpdate
         );
     }
@@ -540,10 +556,10 @@ class PaymentsRepository extends Repository
             )->count('*');
         };
 
-        return $this->cacheRepository->loadByKeyAndUpdate(
+        return $this->cacheRepository->loadAndUpdate(
             'subscriptions_with_active_uncharged_recurrent_ending_next_month_count',
             $callable,
-            \Nette\Utils\DateTime::from('-10 minutes'),
+            \Nette\Utils\DateTime::from(CacheRepository::REFRESH_TIME_5_MINUTES),
             $forceCacheUpdate
         );
     }
@@ -581,10 +597,10 @@ class PaymentsRepository extends Repository
                 \Nette\Utils\DateTime::from('+14 days 23:59:59')
             );
         };
-        return $this->cacheRepository->loadByKeyAndUpdate(
+        return $this->cacheRepository->loadAndUpdate(
             'subscriptions_without_extension_ending_next_two_weeks_count',
             $callable,
-            \Nette\Utils\DateTime::from('-10 minutes'),
+            \Nette\Utils\DateTime::from(CacheRepository::REFRESH_TIME_5_MINUTES),
             $forceCacheUpdate
         );
     }
@@ -604,10 +620,10 @@ class PaymentsRepository extends Repository
                 \Nette\Utils\DateTime::from('+31 days 23:59:59')
             );
         };
-        return $this->cacheRepository->loadByKeyAndUpdate(
+        return $this->cacheRepository->loadAndUpdate(
             'subscriptions_without_extension_ending_next_month_count',
             $callable,
-            \Nette\Utils\DateTime::from('-10 minutes'),
+            \Nette\Utils\DateTime::from(CacheRepository::REFRESH_TIME_5_MINUTES),
             $forceCacheUpdate
         );
     }

@@ -12,6 +12,7 @@ services:
 	- Crm\PaymentsModule\Forms\PaymentGatewayFormFactory
 	- Crm\PaymentsModule\Forms\AccountantExportFormFactory
 	- Crm\PaymentsModule\GatewayFactory
+	- Crm\PaymentsModule\PaymentsHistogramFactory
 	- Crm\PaymentsModule\RecurrentPaymentsResolver
 	- Crm\PaymentsModule\Forms\RecurrentPaymentFormFactory
 	- Crm\PaymentsModule\PaymentProcessor
@@ -50,6 +51,7 @@ services:
 	- Crm\PaymentsModule\Gateways\CsobOneClick
 	- Crm\PaymentsModule\Hermes\CreateRecurrentPaymentHandler
 	- Crm\PaymentsModule\Segment\PaymentCriteria
+	- Crm\PaymentsModule\Segment\PaymentCountsCriteria
 	- Crm\PaymentsModule\Segment\RecurrentPaymentCriteria
 	- Crm\PaymentsModule\User\PaymentsUserDataProvider
 	- Crm\PaymentsModule\User\RecurrentPaymentsUserDataProvider

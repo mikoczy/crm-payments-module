@@ -42,21 +42,7 @@ class ParsedMailsFailedNotification extends BaseWidget
 
     public function render($id = '')
     {
-        $wrongAmountPayments = $this->parsedMailLogsRepository->all('', 'different_amount');
-
-        $listPayments = [];
-        foreach ($wrongAmountPayments as $wrongAmountPayment) {
-            $payment = $this->paymentsRepository->findLastByVS($wrongAmountPayment->variable_symbol);
-            if ($payment && $payment->status == PaymentsRepository::STATUS_FORM) {
-                $listPayments[] = [
-                    'user_id' => $payment->user->id,
-                    'amount' => $wrongAmountPayment->amount,
-                    'email' => $payment->user->email
-                ];
-            }
-        }
-
-        $this->template->listPayments = $listPayments;
+        $this->template->listPayments = $this->parsedMailLogsRepository->formPaymentsWithWrongAmount();
 
         $this->template->setFile(__DIR__ . '/' . $this->templateName);
         $this->template->render();

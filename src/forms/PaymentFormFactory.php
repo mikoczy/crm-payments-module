@@ -298,10 +298,10 @@ class PaymentFormFactory
             $subscriptionType = $this->subscriptionTypesRepository->find($values['subscription_type_id']);
         }
 
-        if ($values['subscription_start_at'] == '') {
+        if (!isset($values['subscription_start_at']) || $values['subscription_start_at'] == '') {
             $values['subscription_start_at'] = null;
         }
-        if ($values['subscription_end_at'] == '') {
+        if (!isset($values['subscription_end_at']) || $values['subscription_end_at'] == '') {
             $values['subscription_end_at'] = null;
         }
 
@@ -313,22 +313,25 @@ class PaymentFormFactory
             $values['referer'] = null;
         }
 
-        if ($values['manual_subscription'] === self::MANUAL_SUBSCRIPTION_START) {
-            if ($values['subscription_start_at'] === null) {
-                throw new \Exception("manual subscription start attempted without providing start date");
+        if (isset($values['manual_subscription'])) {
+            if ($values['manual_subscription'] === self::MANUAL_SUBSCRIPTION_START) {
+                if ($values['subscription_start_at'] === null) {
+                    throw new \Exception("manual subscription start attempted without providing start date");
+                }
+                $subscriptionStartAt = DateTime::from($values['subscription_start_at']);
+            } elseif ($values['manual_subscription'] === self::MANUAL_SUBSCRIPTION_START_END) {
+                if ($values['subscription_start_at'] === null) {
+                    throw new \Exception("manual subscription start attempted without providing start date");
+                }
+                $subscriptionStartAt = DateTime::from($values['subscription_start_at']);
+                if ($values['subscription_end_at'] === null) {
+                    throw new \Exception("manual subscription end attempted without providing end date");
+                }
+                $subscriptionEndAt = DateTime::from($values['subscription_end_at']);
             }
-            $subscriptionStartAt = DateTime::from($values['subscription_start_at']);
-        } elseif ($values['manual_subscription'] === self::MANUAL_SUBSCRIPTION_START_END) {
-            if ($values['subscription_start_at'] === null) {
-                throw new \Exception("manual subscription start attempted without providing start date");
-            }
-            $subscriptionStartAt = DateTime::from($values['subscription_start_at']);
-            if ($values['subscription_end_at'] === null) {
-                throw new \Exception("manual subscription end attempted without providing end date");
-            }
-            $subscriptionEndAt = DateTime::from($values['subscription_end_at']);
         }
-
+        unset($values['subscription_end_at']);
+        unset($values['subscription_start_at']);
         unset($values['manual_subscription']);
 
         $paymentGateway = $this->paymentGatewaysRepository->find($values['payment_gateway_id']);
@@ -406,7 +409,14 @@ class PaymentFormFactory
                 $paymentItemContainer->addItem(new DonationPaymentItem($this->translator->translate('payments.admin.donation'), $values['additional_amount'], $this->donationPaymentVat));
             }
 
+            // we don't want to update subscription dates on payment if it's already paid
+            if ($currentStatus === PaymentsRepository::STATUS_FORM) {
+                $values['subscription_start_at'] = $subscriptionStartAt;
+                $values['subscription_end_at'] = $subscriptionEndAt;
+            }
+
             $this->paymentsRepository->update($payment, $values, $paymentItemContainer);
+
             if ($currentStatus !== $values['status']) {
                 $this->paymentsRepository->updateStatus($payment, $values['status'], $sendNotification);
             }

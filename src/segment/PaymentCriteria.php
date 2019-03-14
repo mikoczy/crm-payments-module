@@ -7,17 +7,23 @@ use Crm\ApplicationModule\Criteria\CriteriaInterface;
 use Crm\SegmentModule\Criteria\Fields;
 use Crm\SegmentModule\Params\BooleanParam;
 use Crm\SegmentModule\Params\DateTimeParam;
+use Crm\SegmentModule\Params\NumberArrayParam;
 use Crm\SegmentModule\Params\ParamsBag;
 use Crm\SegmentModule\Params\StringArrayParam;
+use Crm\SubscriptionsModule\Repository\SubscriptionTypesRepository;
 
 class PaymentCriteria implements CriteriaInterface
 {
     private $paymentsRepository;
 
+    private $subscriptionTypesRepository;
+
     public function __construct(
-        PaymentsRepository $paymentsRepository
+        PaymentsRepository $paymentsRepository,
+        SubscriptionTypesRepository $subscriptionTypesRepository
     ) {
         $this->paymentsRepository = $paymentsRepository;
+        $this->subscriptionTypesRepository = $subscriptionTypesRepository;
     }
 
     public function label(): string
@@ -33,29 +39,60 @@ class PaymentCriteria implements CriteriaInterface
     public function params(): array
     {
         return [
-            new BooleanParam('additional_amount', "Donation", "Filters payments with / without donation"),
-            new DateTimeParam('created', "Created", "Filters payments created within selected period"),
+            new BooleanParam(
+                "additional_amount",
+                "Donation",
+                "Filters users with payments with / without donation"
+            ),
+            new DateTimeParam(
+                "created",
+                "Created",
+                "Filters users with payments created within selected period"
+            ),
+            new StringArrayParam(
+                "status",
+                "Status",
+                "Filters users with payments with specific status",
+                false,
+                [PaymentsRepository::STATUS_PAID],
+                null,
+                array_keys($this->paymentsRepository->getStatusPairs())
+            ),
+            new NumberArrayParam(
+                "subscription_type",
+                "Subscription type",
+                "Filters users with payments with specific subscription types",
+                false,
+                null,
+                null,
+                $this->subscriptionTypesRepository->getAllActive()->fetchPairs('id', 'name')
+            ),
         ];
     }
 
-    public function join(ParamsBag $paramBag): string
+    public function join(ParamsBag $params): string
     {
         $where = [];
 
-        if ($paramBag->has('additional_amount')) {
-            if ($paramBag->boolean('additional_amount')->isTrue()) {
+        if ($params->has('additional_amount')) {
+            if ($params->boolean('additional_amount')->isTrue()) {
                 $where[] = ' payments.additional_amount > 0 AND payments.additional_type IS NOT NULL ';
-            } elseif ($paramBag->boolean('additional_amount')->isFalse()) {
+            } elseif ($params->boolean('additional_amount')->isFalse()) {
                 $where[] = ' payments.additional_amount = 0 AND payments.additional_type IS NULL ';
             }
         }
 
-        if ($paramBag->has('status')) {
-            $where[] = " payments.status IN ({$paramBag->stringArray('status')->escapedString()}) ";
+        if ($params->has('status')) {
+            $where[] = " payments.status IN ({$params->stringArray('status')->escapedString()}) ";
         }
 
-        if ($paramBag->has('created')) {
-            $where += $paramBag->datetime('created')->escapedConditions('payments.created_at');
+        if ($params->has('created')) {
+            $where += $params->datetime('created')->escapedConditions('payments.created_at');
+        }
+
+        if ($params->has('subscription_type')) {
+            $values = $params->numberArray('subscription_type')->escapedString();
+            $where[] = " subscription_type_id IN ({$values}) ";
         }
 
         return "SELECT DISTINCT(payments.user_id) AS id, " . Fields::formatSql($this->fields()) . "

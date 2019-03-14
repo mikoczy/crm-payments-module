@@ -2,8 +2,13 @@
 
 namespace Crm\PaymentsModule\MailConfirmation;
 
+use Crm\ApplicationModule\Cache\CacheRepository;
 use Crm\ApplicationModule\Repository;
+use Crm\PaymentsModule\Repository\PaymentsRepository;
 use Crm\PaymentsModule\VariableSymbolVariant;
+use Nette\Caching\IStorage;
+use Nette\Database\Context;
+use Nette\Utils\Json;
 
 class ParsedMailLogsRepository extends Repository
 {
@@ -17,6 +22,21 @@ class ParsedMailLogsRepository extends Repository
     const STATE_NOT_VALID_SIGN = 'no_valid_sign';
 
     protected $tableName = 'parsed_mail_logs';
+
+    private $paymentsRepository;
+
+    private $cacheRepository;
+
+    public function __construct(
+        Context $database,
+        PaymentsRepository $paymentsRepository,
+        CacheRepository $cacheRepository,
+        IStorage $cacheStorage = null
+    ) {
+        parent::__construct($database, $cacheStorage);
+        $this->paymentsRepository = $paymentsRepository;
+        $this->cacheRepository = $cacheRepository;
+    }
 
     public function all($vs = '', $state = '')
     {
@@ -40,5 +60,42 @@ class ParsedMailLogsRepository extends Repository
     public function lastLog()
     {
         return $this->getTable()->order('created_at DESC')->limit(1)->fetch();
+    }
+
+
+    /**
+     * Cached form payments with wrong amount
+     *
+     * @param bool $forceCacheUpdate
+     *
+     * @return array
+     * @throws \Nette\Utils\JsonException
+     */
+    public function formPaymentsWithWrongAmount($forceCacheUpdate = false): array
+    {
+        $callable = function () {
+            $wrongAmountPayments = $this->all('', 'different_amount');
+
+            $listPayments = [];
+            foreach ($wrongAmountPayments as $wrongAmountPayment) {
+                $payment = $this->paymentsRepository->findLastByVS($wrongAmountPayment->variable_symbol);
+                if ($payment && $payment->status == PaymentsRepository::STATUS_FORM) {
+                    $listPayments[] = [
+                        'user_id' => $payment->user->id,
+                        'amount' => $wrongAmountPayment->amount,
+                        'email' => $payment->user->email
+                    ];
+                }
+            }
+
+            return Json::encode($listPayments);
+        };
+
+        return Json::decode($this->cacheRepository->loadAndUpdate(
+            'payments_with_wrong_sum',
+            $callable,
+            \Nette\Utils\DateTime::from(CacheRepository::REFRESH_TIME_1_HOUR),
+            $forceCacheUpdate
+        ), Json::FORCE_ARRAY);
     }
 }

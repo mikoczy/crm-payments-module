@@ -5,8 +5,6 @@ namespace Crm\PaymentsModule\Presenters;
 use Crm\ApplicationModule\Components\Graphs\SmallBarGraphControlFactoryInterface;
 use Crm\ApplicationModule\Components\VisualPaginator;
 use Crm\ApplicationModule\DataProvider\DataProviderManager;
-use Crm\ApplicationModule\Graphs\Criteria;
-use Crm\ApplicationModule\Graphs\GraphDataItem;
 use Crm\AdminModule\Presenters\AdminPresenter;
 use Crm\PaymentsModule\Components\ChangePaymentStatusFactoryInterface;
 use Crm\PaymentsModule\Components\GiftCouponsFactoryInterface;
@@ -14,6 +12,7 @@ use Crm\PaymentsModule\DataProvider\AdminFilterFormDataProviderInterface;
 use Crm\PaymentsModule\Forms\AccountantExportFormFactory;
 use Crm\PaymentsModule\Forms\PaymentFormFactory;
 use Crm\PaymentsModule\PaymentProcessor;
+use Crm\PaymentsModule\PaymentsHistogramFactory;
 use Crm\PaymentsModule\Repository\PaymentGatewaysRepository;
 use Crm\PaymentsModule\Repository\PaymentsRepository;
 use Crm\PaymentsModule\Repository\RecurrentPaymentsRepository;
@@ -57,6 +56,9 @@ class PaymentsAdminPresenter extends AdminPresenter
     /** @var DataProviderManager @inject */
     public $dataProviderManager;
 
+    /** @var PaymentsHistogramFactory @inject */
+    public $paymentsHistogramFactory;
+
     /** @persistent */
     public $payment_gateway;
 
@@ -87,15 +89,17 @@ class PaymentsAdminPresenter extends AdminPresenter
     public function renderDefault()
     {
         $payments = $this->filteredPayments();
+        $filteredCount = $payments->count('*');
 
         $vp = new VisualPaginator();
         $this->addComponent($vp, 'vp');
         $paginator = $vp->getPaginator();
-        $paginator->setItemCount($payments->count('*'));
+        $paginator->setItemCount($filteredCount);
         $paginator->setItemsPerPage($this->onPage);
         $this->template->vp = $vp;
+        $this->template->filteredCount = $filteredCount;
         $this->template->payments = $payments->limit($paginator->getLength(), $paginator->getOffset());
-        $this->template->totalPayments = $this->paymentsRepository->totalCount();
+        $this->template->totalPayments = $this->paymentsRepository->totalCount(true);
     }
 
     private function filteredPayments()
@@ -569,7 +573,7 @@ SQL;
         $paginator->setItemsPerPage($this->onPage);
         $this->template->vp = $vp;
         $this->template->payments = $payments->limit($paginator->getLength(), $paginator->getOffset());
-        $this->template->totalPayments = $this->paymentsRepository->totalCount();
+        $this->template->totalPayments = $this->paymentsRepository->totalCount(true);
     }
 
     public function createComponentPaymentForm()
@@ -630,32 +634,21 @@ SQL;
 
     private function generateSmallBarGraphComponent($status, $title, SmallBarGraphControlFactoryInterface $factory)
     {
-        $graphDataItem = new GraphDataItem();
-        $graphDataItem->setCriteria((new Criteria())
-            ->setTableName('payments')
-            ->setWhere("AND payments.status = '$status'"));
-
-        $graphData = $this->context->getService('graph_data');
-        $graphData->addGraphDataItem($graphDataItem);
-        $graphData->setScaleRange('day')
-            ->setStart('-31 days');
+        $data = $this->paymentsHistogramFactory->paymentsLastMonthDailyHistogram($status);
 
         $control = $factory->create();
-        $control->setGraphTitle($title)
-            ->addSerie($graphData->getData());
+        $control->setGraphTitle($title)->addSerie($data);
 
         return $control;
     }
 
     protected function createComponentChangePaymentStatus(ChangePaymentStatusFactoryInterface $factory)
     {
-        $control = $factory->create();
-        return $control;
+        return $factory->create();
     }
 
     protected function createComponentGiftCoupons(GiftCouponsFactoryInterface $factory)
     {
-        $control = $factory->create();
-        return $control;
+        return $factory->create();
     }
 }
