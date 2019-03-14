@@ -2,8 +2,10 @@
 
 namespace Crm\PaymentsModule\Commands;
 
-use Crm\MailModule\Mailer\ApplicationMailer;
+use Crm\ApplicationModule\DataRow;
 use Crm\PaymentsModule\Repository\RecurrentPaymentsRepository;
+use Crm\UsersModule\Events\NotificationEvent;
+use League\Event\Emitter;
 use Nette\Utils\DateTime;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
@@ -11,19 +13,17 @@ use Symfony\Component\Console\Output\OutputInterface;
 
 class StopRecurrentPaymentsExpiresCommand extends Command
 {
-    /** @var RecurrentPaymentsRepository  */
     private $recurrentPaymentsRepository;
 
-    /** @var ApplicationMailer  */
-    private $applicationMailer;
+    private $emitter;
 
     public function __construct(
         RecurrentPaymentsRepository $recurrentPaymentsRepository,
-        ApplicationMailer $applicationMailer
+        Emitter $emitter
     ) {
         parent::__construct();
         $this->recurrentPaymentsRepository = $recurrentPaymentsRepository;
-        $this->applicationMailer = $applicationMailer;
+        $this->emitter = $emitter;
     }
 
     protected function configure()
@@ -80,10 +80,10 @@ class StopRecurrentPaymentsExpiresCommand extends Command
                 $output->writeln("  * has new recurrent <info>{$recurrentPayment->user->email}</info>");
             } else {
                 $output->writeln("  * Sending email <info>{$recurrentPayment->user->email}</info>");
-                $this->applicationMailer->send(
-                    $recurrentPayment->user->email,
-                    'card_expires_this_month'
-                );
+                $userRow = new DataRow([
+                    'email' => $recurrentPayment->user->email,
+                ]);
+                $this->emitter->emit(new NotificationEvent($userRow, 'card_expires_this_month'));
             }
         }
 

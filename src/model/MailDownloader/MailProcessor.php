@@ -2,7 +2,6 @@
 
 namespace Crm\PaymentsModule\MailConfirmation;
 
-use Crm\MailModule\Mailer\ApplicationMailer;
 use Crm\PaymentsModule\Builder\ParsedMailLogsBuilder;
 use Crm\PaymentsModule\model\MailDownloader\MailProcessorException;
 use Crm\PaymentsModule\PaymentProcessor;
@@ -25,9 +24,6 @@ class MailProcessor
     /** @var PaymentProcessor */
     private $paymentProcessor;
 
-    /** @var ApplicationMailer */
-    private $applicationMailer;
-
     /** @var ParsedMailLogsBuilder */
     private $parsedMailLogsBuilder;
 
@@ -47,7 +43,6 @@ class MailProcessor
         PaymentsRepository $paymentsRepository,
         RecurrentPaymentsRepository $recurrentPaymentsRepository,
         PaymentProcessor $paymentProcessor,
-        ApplicationMailer $applicationMailer,
         ParsedMailLogsBuilder $parsedMailLogsBuilder,
         Container $context
     ) {
@@ -55,7 +50,6 @@ class MailProcessor
         $this->paymentsRepository = $paymentsRepository;
         $this->recurrentPaymentsRepository = $recurrentPaymentsRepository;
         $this->paymentProcessor = $paymentProcessor;
-        $this->applicationMailer = $applicationMailer;
         $this->parsedMailLogsBuilder = $parsedMailLogsBuilder;
     }
 
