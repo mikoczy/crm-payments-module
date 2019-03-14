@@ -36,7 +36,6 @@ services:
 	- Crm\PaymentsModule\Commands\LastPaymentsCheckCommand
 	- Crm\PaymentsModule\Commands\CidGetterCommand
 	- Crm\PaymentsModule\Api\VariableSymbolApiHandler
-	- Crm\PaymentsModule\Api\ListPublicMetaHandler
 	- Crm\PaymentsModule\MailConfirmation\CidGetterDownloader
 	variableSymbol: Crm\PaymentsModule\Repository\VariableSymbol
 	- Crm\PaymentsModule\Commands\RepairRecurrentsCommand

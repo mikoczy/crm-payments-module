@@ -222,14 +222,6 @@ class PaymentsModule extends CrmModule
                 \Crm\ApiModule\Authorization\AdminLoggedAuthorization::class
             )
         );
-
-        $apiRoutersContainer->attachRouter(
-            new ApiRoute(
-                new ApiIdentifier('1', 'payments', 'list-public-meta'),
-                Api\ListPublicMetaHandler::class,
-                \Crm\ApiModule\Authorization\NoAuthorization::class
-            )
-        );
     }
 
     public function registerCleanupFunction(CallbackManagerInterface $cleanUpManager)
