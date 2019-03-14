@@ -11,7 +11,7 @@ use Crm\PaymentsModule\Repository\PaymentsRepository;
 use Nette\Database\Table\ActiveRow;
 use Nette\Http\Response;
 
-class ListPaymentsHandler extends ApiHandler
+class ListPublicMetaHandler extends ApiHandler
 {
     private $paymentsRepository;
 
@@ -28,6 +28,11 @@ class ListPaymentsHandler extends ApiHandler
                 InputParam::TYPE_POST,
                 'sales_funnel_url_key',
                 InputParam::REQUIRED
+            ),
+            new InputParam(
+                InputParam::TYPE_POST,
+                'meta_keys',
+                InputParam::OPTIONAL
             )
         ];
     }
@@ -43,26 +48,26 @@ class ListPaymentsHandler extends ApiHandler
 
         if (!$params['sales_funnel_url_key']) {
             $response = new JsonResponse(['status' => 'error', 'message' => 'No valid sales funnel url key', 'code' => 'url_key_missing']);
-            $response->setHttpCode(Response::S200_OK);
+            $response->setHttpCode(Response::S404_NOT_FOUND);
             return $response;
         }
 
         $payments = $this->paymentsRepository->findBySalesFunnelUrlKey($params['sales_funnel_url_key'])
-            ->select('payments.*')
             ->where('payments.status = "paid"')
             ->order('payments.created_at ASC');
 
         $data = [];
-
-        /** @var $payment ActiveRow */
         foreach ($payments as $payment) {
+            /** @var $payment ActiveRow */
             $item = [
                 'amount' => $payment->amount,
                 'meta' => [],
             ];
 
             foreach ($payment->related('payment_meta.payment_id') as $paymentMeta) {
-                $item['meta'][$paymentMeta->key] = $paymentMeta->value;
+                if ($params['meta_keys'] && in_array($paymentMeta->key, $params['meta_keys'])) {
+                    $item['meta'][$paymentMeta->key] = $paymentMeta->value;
+                }
             }
 
             $data[] = $item;

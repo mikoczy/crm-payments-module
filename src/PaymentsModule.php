@@ -225,8 +225,8 @@ class PaymentsModule extends CrmModule
 
         $apiRoutersContainer->attachRouter(
             new ApiRoute(
-                new ApiIdentifier('1', 'payments', 'list'),
-                Api\ListPaymentsHandler::class,
+                new ApiIdentifier('1', 'payments', 'list-public-meta'),
+                Api\ListPublicMetaHandler::class,
                 \Crm\ApiModule\Authorization\NoAuthorization::class
             )
         );
