@@ -141,30 +141,6 @@ class PaymentsRepository extends Repository
 
         $this->paymentItemsRepository->add($payment, $paymentItemContainer);
 
-        // subscriptions
-        // TODO NAJDI!
-//        if (!empty($paymentItems)) {
-//            foreach ($paymentItems as $item) {
-//                $this->paymentItemsRepository->add(
-//                    $payment,
-//                    $item['name'],
-//                    $item['amount'],
-//                    $item['vat'],
-//                    $payment->subscription_type_id
-//                );
-//            }
-//        } elseif ($payment->subscription_type_id) {
-//            $subscriptionTypeItems = $payment->subscription_type->related('subscription_type_items')->order('sorting');
-//            foreach ($subscriptionTypeItems as $subscriptionTypeItem) {
-//                $this->paymentItemsRepository->add($payment, $subscriptionTypeItem->name, $subscriptionTypeItem->amount, $subscriptionTypeItem->vat, $payment->subscription_type_id);
-//            }
-//        }
-//
-//        // donations
-//        if ($payment->additional_amount) {
-//            $this->paymentItemsRepository->add($payment, $this->translator->translate('payments.admin.donation'), $payment->additional_amount, $this->donationVatRate, null);
-//        }
-
         $this->emitter->emit(new NewPaymentEvent($payment));
         return $payment;
     }

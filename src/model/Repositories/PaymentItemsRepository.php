@@ -58,34 +58,6 @@ class PaymentItemsRepository extends Repository
         }
         return $rows;
     }
-/*
-    public function add(IRow $payment, string $name, $amount, int $vat, int $subscriptionTypeId = null, IRow $product = null, int $count = 1)
-    {
-        $type = 'subscription_type';
-        if (!$subscriptionTypeId && $product) {
-            $type = 'product';
-        }
-
-        $paymentItem = $this->insert([
-            'payment_id' => $payment->id,
-            'subscription_type_id' => $subscriptionTypeId,
-            'product_id' => $product ? $product->id : null,
-            'count' => $count,
-            'name' => $name,
-            'amount' => $amount,
-            'vat' => $vat,
-            'type' => $type,
-            'created_at' => new DateTime(),
-            'updated_at' => new DateTime(),
-        ]);
-
-        if ($product) {
-            $this->emitter->emit(new CartItemAddedEvent($paymentItem->product));
-        }
-
-        return $paymentItem;
-    }
-*/
 
     public function deleteByPayment(IRow $payment)
     {
