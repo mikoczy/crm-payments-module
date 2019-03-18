@@ -59,10 +59,13 @@ class PaymentItemsRepository extends Repository
         return $rows;
     }
 
-    public function deleteByPayment(IRow $payment)
+    public function deleteByPayment(IRow $payment, $type = null)
     {
-        return $this->getTable()
-            ->where('payment_id', $payment->id)
-            ->delete();
+        $q = $this->getTable()
+            ->where('payment_id', $payment->id);
+        if ($type) {
+            $q->where('type = ?', $type);
+        }
+        return $q->delete();
     }
 }
