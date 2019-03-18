@@ -86,7 +86,7 @@ class PaidRecurrentUpgrade extends Upgrader
             $payment->user,
             $paymentItemContainer,
             '',
-            $chargePrice,
+            null,
             null,
             null,
             "Payment for upgrade from {$actualUserSubscription->subscription_type->name} to {$toSubscriptionType->name}"

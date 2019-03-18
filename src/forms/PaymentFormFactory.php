@@ -454,7 +454,7 @@ class PaymentFormFactory
                 $user,
                 $paymentItemContainer,
                 $values['referer'],
-                $values['amount'],
+                null,
                 $subscriptionStartAt,
                 $subscriptionEndAt,
                 $values['note'],

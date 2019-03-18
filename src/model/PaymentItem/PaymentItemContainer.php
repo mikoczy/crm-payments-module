@@ -4,6 +4,7 @@ namespace Crm\PaymentsModule\PaymentItem;
 
 class PaymentItemContainer
 {
+    /** @var PaymentItemInterface[] */
     private $items = [];
 
     public function addItem(PaymentItemInterface $item): self
@@ -20,7 +21,9 @@ class PaymentItemContainer
         return $this;
     }
 
-
+    /**
+     * @return PaymentItemInterface[]
+     */
     public function items(): array
     {
         return $this->items;
@@ -30,7 +33,7 @@ class PaymentItemContainer
     {
         $price = 0;
         foreach ($this->items() as $item) {
-            $price += $item->getPrice();
+            $price += $item->price();
         }
         return $price;
     }

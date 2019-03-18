@@ -78,8 +78,7 @@ class PaidExtendUpgrade extends Upgrader
             $gateway,
             $payment->user,
             $paymentItemContainer,
-            '',
-            $chargePrice
+            ''
         );
 
         $upgradeType = Expander::UPGRADE_PAID_EXTEND;

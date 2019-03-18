@@ -126,16 +126,28 @@ class PaymentsRepository extends Repository
             'recurrent_charge' => $recurrentCharge,
             'invoiceable' => $invoiceable,
         ];
-        if ($subscriptionType) {
-            $data['amount'] = $subscriptionType->price;
-            $data['subscription_type_id'] = $subscriptionType->id;
-        }
+
+        // TODO: Additional type/amount fields are only informative and should be replaced with single/recurrent flag
+        // directly on payment_items and be removed from here. additional_amount should not affect total amount anymore.
+
+        // If amount is not provided, it's calculated based on payment items in container.
         if ($amount) {
             $data['amount'] = $amount;
+        } else {
+            $data['amount'] = $paymentItemContainer->totalPrice();
         }
-        if (isset($data['amount']) && $additionalAmount) {
-            $data['amount'] += $additionalAmount;
+
+        // It's not possible to generate payment amount based on payment items as postal fees of product module were
+        // not refactored yet to separate payment item. Therefore custom "$amount" is still allowed.
+
+        if ($data['amount'] <= 0) {
+            throw new \Exception('attempt to create payment with zero or negative amount: ' . $data['amount']);
         }
+
+        if ($subscriptionType) {
+            $data['subscription_type_id'] = $subscriptionType->id;
+        }
+
         /** @var ActiveRow $payment */
         $payment = $this->insert($data);
 
