@@ -363,12 +363,12 @@ class PaymentFormFactory
                     $form['subscription_type_id']->addError('Cena položiek musí byť nezáporná');
                 }
                 if ($subscriptionType) {
-//                    die('x');
-                    $paymentItem = new SubscriptionTypePaymentItem($subscriptionType, 1);
-                    $paymentItem->forceName($item->name);
-                    $paymentItem->forceVat($item->vat);
-                    $paymentItem->forcePrice($item->amount);
-
+                    $paymentItem = new SubscriptionTypePaymentItem(
+                        $subscriptionType->id,
+                        $item->name,
+                        $item->amount,
+                        $item->vat
+                    );
                     $paymentItemContainer->addItem($paymentItem);
                 }
             }

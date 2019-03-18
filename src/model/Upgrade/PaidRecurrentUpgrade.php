@@ -76,7 +76,12 @@ class PaidRecurrentUpgrade extends Upgrader
         $upgradedItem = $this->getToSubscriptionTypeItem();
 
         $chargePrice = $this->getChargePrice();
-        $item = new SubscriptionTypePaymentItem($toSubscriptionType, 1, $upgradedItem->name, $chargePrice, $upgradedItem->vat);
+        $item = new SubscriptionTypePaymentItem(
+            $toSubscriptionType->id,
+            $upgradedItem->name,
+            $chargePrice,
+            $upgradedItem->vat
+        );
         $paymentItemContainer = (new PaymentItemContainer())->addItem($item);
 
         // spravit novu platbu a rovno ju chargnut
@@ -156,7 +161,7 @@ class PaidRecurrentUpgrade extends Upgrader
 
         // zistime kolko penazi usetril
         $subscriptionDays = $actualUserSubscription->start_time->diff($actualUserSubscription->end_time)->days;
-        $dayPrice = $payment->amount / $subscriptionDays;
+        $dayPrice = ($payment->amount - intval($payment->additional_amount)) / $subscriptionDays;
         $saveFromActual = (new DateTime())->diff($actualUserSubscription->end_time)->days * $dayPrice;
         $saveFromActual = round($saveFromActual, 2);
 

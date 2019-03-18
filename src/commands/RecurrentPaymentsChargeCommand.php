@@ -156,11 +156,14 @@ class RecurrentPaymentsChargeCommand extends Command
                 // for now this should be ok because we are not selling recurring products
                 $paymentItemContainer = new PaymentItemContainer();
                 foreach ($items as $item) {
-                    $paymentItem = (new SubscriptionTypePaymentItem($subscriptionType))
-                        ->forceName($item['name'])
-                        ->forcePrice($item['amount'])
-                        ->forceVat($item['vat']);
-                    $paymentItemContainer->addItem($paymentItem);
+                    $paymentItemContainer->addItem(
+                        new SubscriptionTypePaymentItem(
+                            $subscriptionType->id,
+                            $item['name'],
+                            $item['amount'],
+                            $item['vat']
+                        )
+                    );
                 }
                 if ($additionalType == 'recurrent' && $additionalAmount) {
                     $paymentItemContainer->addItem(

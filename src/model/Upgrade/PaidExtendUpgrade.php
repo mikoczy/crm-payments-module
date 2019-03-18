@@ -69,7 +69,12 @@ class PaidExtendUpgrade extends Upgrader
         $upgradedItem = $this->getToSubscriptionTypeItem();
 
         $chargePrice = $this->getChargePrice();
-        $item = new SubscriptionTypePaymentItem($toSubscriptionType, 1, $upgradedItem->name, $chargePrice, $upgradedItem->vat);
+        $item = new SubscriptionTypePaymentItem(
+            $toSubscriptionType->id,
+            $upgradedItem->name,
+            $chargePrice,
+            $upgradedItem->vat
+        );
         $paymentItemContainer = (new PaymentItemContainer())->addItem($item);
 
         // vytvorime novu platu
