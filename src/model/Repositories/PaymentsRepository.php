@@ -655,7 +655,7 @@ SQL;
     }
 
     /**
-     * @param DateTime $createdAt
+     * @param DateTime $from
      * @return Selection
      */
     public function unconfirmedPayments(DateTime $from)
@@ -664,5 +664,15 @@ SQL;
             ->where('payments.status = ?', self::STATUS_FORM)
             ->where('payments.created_at >= ?', $from)
             ->order('payments.created_at DESC');
+    }
+
+    /**
+     * @param string $urlKey
+     * @return \Crm\ApplicationModule\Selection
+     */
+    public function findBySalesFunnelUrlKey(string $urlKey)
+    {
+        return $this->getTable()
+            ->where('sales_funnel.url_key', $urlKey);
     }
 }

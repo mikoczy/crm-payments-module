@@ -2,9 +2,11 @@
 
 namespace Crm\PaymentsModule\Commands;
 
-use Crm\MailModule\Mailer\ApplicationMailer;
+use Crm\ApplicationModule\DataRow;
 use Crm\PaymentsModule\Repository\PaymentGatewaysRepository;
 use Crm\PaymentsModule\Repository\PaymentsRepository;
+use Crm\UsersModule\Events\NotificationEvent;
+use League\Event\Emitter;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -16,19 +18,19 @@ class LastPaymentsCheckCommand extends Command
 
     private $paymentsRepository;
 
-    private $applicationMailer;
+    private $emitter;
 
     private $emailTempate = 'problems_with_payments_notification';
 
     public function __construct(
         PaymentGatewaysRepository $paymentGatewaysRepository,
         PaymentsRepository $paymentsRepository,
-        ApplicationMailer $applicationMailer
+        Emitter $emitter
     ) {
         parent::__construct();
         $this->paymentGatewaysRepository = $paymentGatewaysRepository;
         $this->paymentsRepository = $paymentsRepository;
-        $this->applicationMailer = $applicationMailer;
+        $this->emitter = $emitter;
     }
 
     protected function configure()
@@ -83,12 +85,24 @@ class LastPaymentsCheckCommand extends Command
             if ($form == $checkCount) {
                 $output->writeln('<error>Notification</error> form');
                 foreach ($emails as $email) {
-                    $this->applicationMailer->send($email, $this->emailTempate, ['gateway' => $gateway, 'error' => 'form']);
+                    $userRow = new DataRow([
+                        'email' => $email,
+                    ]);
+                    $this->emitter->emit(new NotificationEvent($userRow, $this->emailTempate, [
+                        'gateway' => $gateway,
+                        'error' => 'form',
+                    ]));
                 }
             } elseif ($error == $checkCount) {
                 $output->writeln('<error>Notification</error> error');
                 foreach ($emails as $email) {
-                    $this->applicationMailer->send($email, $this->emailTempate, ['gateway' => $gateway, 'error' => 'error']);
+                    $userRow = new DataRow([
+                        'email' => $email,
+                    ]);
+                    $this->emitter->emit(new NotificationEvent($userRow, $this->emailTempate, [
+                        'gateway' => $gateway,
+                        'error' => 'error',
+                    ]));
                 }
             } else {
                 $output->writeln('OK');
