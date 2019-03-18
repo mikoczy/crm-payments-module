@@ -28,7 +28,7 @@ services:
 	- Crm\PaymentsModule\Components\LastPaymentsControlFactoryInterface
 	- Crm\PaymentsModule\Components\TotalUserPayments
 	- Crm\PaymentsModule\Commands\RecurrentPaymentsCardCheck
-	- Crm\PaymentsModule\Commands\RecurrentPaymentsChargeCommand
+	- Crm\PaymentsModule\Commands\RecurrentPaymentsChargeCommand(%donationVatRate%)
 	- Crm\PaymentsModule\Commands\CsobMailConfirmationCommand
 	- Crm\PaymentsModule\Commands\TatraBankaMailConfirmationCommand
 	- Crm\PaymentsModule\Commands\UpdateRecurrentPaymentsExpiresCommand

@@ -8,6 +8,7 @@ use Crm\PaymentsModule\Events\RecurrentPaymentFailTryEvent;
 use Crm\PaymentsModule\Events\RecurrentPaymentRenewedEvent;
 use Crm\PaymentsModule\GatewayFactory;
 use Crm\PaymentsModule\GatewayFail;
+use Crm\PaymentsModule\PaymentItem\DonationPaymentItem;
 use Crm\PaymentsModule\PaymentItem\PaymentItemContainer;
 use Crm\PaymentsModule\RecurrentPaymentFailStop;
 use Crm\PaymentsModule\RecurrentPaymentFailTry;
@@ -30,6 +31,8 @@ use Tracy\Debugger;
 
 class RecurrentPaymentsChargeCommand extends Command
 {
+    private $donationVatRate;
+
     private $recurrentPaymentsRepository;
 
     private $paymentsRepository;
@@ -49,6 +52,7 @@ class RecurrentPaymentsChargeCommand extends Command
     private $translator;
 
     public function __construct(
+        $donationVatRate,
         RecurrentPaymentsRepository $recurrentPaymentsRepository,
         PaymentsRepository $paymentsRepository,
         SubscriptionTypesRepository $subscriptionTypesRepository,
@@ -60,6 +64,7 @@ class RecurrentPaymentsChargeCommand extends Command
         ITranslator $translator
     ) {
         parent::__construct();
+        $this->donationVatRate = $donationVatRate;
         $this->recurrentPaymentsRepository = $recurrentPaymentsRepository;
         $this->subscriptionTypesRepository = $subscriptionTypesRepository;
         $this->paymentsRepository = $paymentsRepository;
@@ -156,6 +161,14 @@ class RecurrentPaymentsChargeCommand extends Command
                         ->forcePrice($item['amount'])
                         ->forceVat($item['vat']);
                     $paymentItemContainer->addItem($paymentItem);
+                }
+                if ($additionalType == 'recurrent' && $additionalAmount) {
+                    $paymentItemContainer->addItem(
+                        new DonationPaymentItem(
+                            $this->translator->translate('payments.admin.donation'),
+                            $additionalAmount,
+                            $this->donationVatRate
+                        ));
                 }
 
                 $payment = $this->paymentsRepository->add(
