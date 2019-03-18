@@ -168,7 +168,8 @@ class RecurrentPaymentsChargeCommand extends Command
                             $this->translator->translate('payments.admin.donation'),
                             $additionalAmount,
                             $this->donationVatRate
-                        ));
+                        )
+                    );
                 }
 
                 $payment = $this->paymentsRepository->add(
