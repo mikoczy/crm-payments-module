@@ -350,8 +350,6 @@ class PaymentFormFactory
         }
 
         $paymentItemContainer = new PaymentItemContainer();
-//        dump($values);
-//        dump($subscriptionType);
 
         if ((isset($values['custom_payment_items']) && $values['custom_payment_items'])
             || ($payment && $payment->status === 'form')
@@ -376,20 +374,8 @@ class PaymentFormFactory
         } else {
             if ($subscriptionType) {
                 $paymentItemContainer->addItems(SubscriptionTypePaymentItem::fromSubscriptionType($subscriptionType));
-//                dump($paymentItemContainer);
-//                die('j');
             }
-//            die('p');
         }
-
-//        die('c');
-
-        // test
-        //  * vytvorenie beznej plaltby na subscripotionk
-        //  * vytvoreni benzej platby na produkty
-        //  X vytvorenie platby na subscription + produckt
-        //  - platba s custom itemamy
-        //  - editacia platieb s itemami??
 
         if ($payment !== null) {
             unset($values['payment_items']);
