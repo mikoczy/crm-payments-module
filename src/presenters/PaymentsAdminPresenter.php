@@ -16,7 +16,6 @@ use Crm\PaymentsModule\PaymentsHistogramFactory;
 use Crm\PaymentsModule\Repository\PaymentGatewaysRepository;
 use Crm\PaymentsModule\Repository\PaymentsRepository;
 use Crm\PaymentsModule\Repository\RecurrentPaymentsRepository;
-use Crm\SalesFunnelModule\Repository\SalesFunnelsRepository;
 use Crm\SubscriptionsModule\Repository\SubscriptionTypesRepository;
 use Crm\UsersModule\Repository\UsersRepository;
 use DateTime;
@@ -41,14 +40,11 @@ class PaymentsAdminPresenter extends AdminPresenter
     /** @var UsersRepository @inject */
     public $usersRepository;
 
-    /** @var  PaymentFormFactory @inject */
+    /** @var PaymentFormFactory @inject */
     public $factory;
 
     /** @var  RecurrentPaymentsRepository @inject */
     public $recurrentPaymentsRepository;
-
-    /** @var SalesFunnelsRepository @inject */
-    public $salesFunnelsRepository;
 
     /** @var AccountantExportFormFactory @inject */
     public $accountantExportFormFactory;
@@ -67,9 +63,6 @@ class PaymentsAdminPresenter extends AdminPresenter
 
     /** @persistent */
     public $status;
-
-    /** @persistent */
-    public $sales_funnel;
 
     /** @persistent */
     public $donation;
@@ -117,7 +110,7 @@ class PaymentsAdminPresenter extends AdminPresenter
             $this->status,
             null,
             null,
-            $this->sales_funnel,
+            null,
             $this->donation,
             $recurrentChargeValues[$this->recurrent_charge] ?? null
         );
@@ -232,9 +225,6 @@ class PaymentsAdminPresenter extends AdminPresenter
         $statuses = $this->paymentsRepository->getStatusPairs();
         $form->addSelect('status', 'Stav platby', $statuses)->setPrompt('--');
 
-        $salesFunnels = $this->salesFunnelsRepository->getTable()->fetchPairs('id', 'name');
-        $form->addSelect('sales_funnel', 'Funnel', $salesFunnels)->setPrompt('--');
-
         $donations = [
             true => 'S darom',
             false => 'Bez daru',
@@ -271,7 +261,6 @@ class PaymentsAdminPresenter extends AdminPresenter
             'payment_gateway' => $this->payment_gateway,
             'subscription_type' => $this->subscription_type,
             'status' => $this->status,
-            'sales_funnel' => $this->sales_funnel,
             'donation' => $this->donation,
             'recurrent_charge' => $this->recurrent_charge,
         ]);
