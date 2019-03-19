@@ -37,6 +37,15 @@ class ConfigsSeeder implements ISeeder
             $output->writeln('  * config category <info>Platby</info> exists');
         }
 
+        $this->addPaymentConfig(
+            $output,
+            $category,
+            'donation_vat_rate',
+            'Donation vat rate',
+            null,
+            800
+        );
+
         $sorting = 1000;
 
         $this->addPaymentConfig($output, $category, 'tatrapay_mid', 'Tatrapay mid', 'aoj', $sorting++);

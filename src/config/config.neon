@@ -4,11 +4,11 @@ services:
 			- addModule(Crm\PaymentsModule\PaymentsModule())
 
 	- Crm\PaymentsModule\Repository\PaymentGatewaysRepository
-	- Crm\PaymentsModule\Repository\PaymentsRepository('%donationVatRate%')
+	- Crm\PaymentsModule\Repository\PaymentsRepository
 	- Crm\PaymentsModule\Repository\PaymentGiftCouponsRepository
 	- Crm\PaymentsModule\Repository\PaymentLogsRepository
 	- Crm\PaymentsModule\Repository\PaymentMetaRepository
-	- Crm\PaymentsModule\Forms\PaymentFormFactory(%payments.donationVatRate%)
+	- Crm\PaymentsModule\Forms\PaymentFormFactory
 	- Crm\PaymentsModule\Forms\PaymentGatewayFormFactory
 	- Crm\PaymentsModule\Forms\AccountantExportFormFactory
 	- Crm\PaymentsModule\GatewayFactory
@@ -28,7 +28,7 @@ services:
 	- Crm\PaymentsModule\Components\LastPaymentsControlFactoryInterface
 	- Crm\PaymentsModule\Components\TotalUserPayments
 	- Crm\PaymentsModule\Commands\RecurrentPaymentsCardCheck
-	- Crm\PaymentsModule\Commands\RecurrentPaymentsChargeCommand(%donationVatRate%)
+	- Crm\PaymentsModule\Commands\RecurrentPaymentsChargeCommand
 	- Crm\PaymentsModule\Commands\CsobMailConfirmationCommand
 	- Crm\PaymentsModule\Commands\TatraBankaMailConfirmationCommand
 	- Crm\PaymentsModule\Commands\UpdateRecurrentPaymentsExpiresCommand

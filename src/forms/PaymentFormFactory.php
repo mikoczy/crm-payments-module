@@ -2,6 +2,7 @@
 
 namespace Crm\PaymentsModule\Forms;
 
+use Crm\ApplicationModule\Config\ApplicationConfig;
 use Crm\ApplicationModule\DataProvider\DataProviderManager;
 use Crm\PaymentsModule\DataProvider\PaymentFormDataProviderInterface;
 use Crm\PaymentsModule\PaymentItem\DonationPaymentItem;
@@ -27,8 +28,6 @@ class PaymentFormFactory
     const MANUAL_SUBSCRIPTION_START = 'start_at';
     const MANUAL_SUBSCRIPTION_START_END = 'start_end_at';
 
-    private $donationPaymentVat;
-
     private $paymentsRepository;
 
     private $paymentGatewaysRepository;
@@ -41,6 +40,8 @@ class PaymentFormFactory
 
     private $dataProviderManager;
 
+    private $applicationConfig;
+
     private $translator;
 
     public $onSave;
@@ -50,22 +51,22 @@ class PaymentFormFactory
     private $onCallback;
 
     public function __construct(
-        $donationPaymentVat,
         PaymentsRepository $paymentsRepository,
         PaymentGatewaysRepository $paymentGatewaysRepository,
         SubscriptionTypesRepository $subscriptionTypesRepository,
         UsersRepository $usersRepository,
         AddressesRepository $addressesRepository,
         DataProviderManager $dataProviderManager,
+        ApplicationConfig $applicationConfig,
         ITranslator $translator
     ) {
-        $this->donationPaymentVat = $donationPaymentVat;
         $this->paymentsRepository = $paymentsRepository;
         $this->paymentGatewaysRepository = $paymentGatewaysRepository;
         $this->subscriptionTypesRepository = $subscriptionTypesRepository;
         $this->usersRepository = $usersRepository;
         $this->addressesRepository = $addressesRepository;
         $this->dataProviderManager = $dataProviderManager;
+        $this->applicationConfig = $applicationConfig;
         $this->translator = $translator;
     }
 
@@ -404,7 +405,11 @@ class PaymentFormFactory
             }
 
             if ($values['additional_amount']) {
-                $paymentItemContainer->addItem(new DonationPaymentItem($this->translator->translate('payments.admin.donation'), $values['additional_amount'], $this->donationPaymentVat));
+                $donationPaymentVat = $this->applicationConfig->get('donation_vat_rate');
+                if ($donationPaymentVat === null) {
+                    throw new \Exception("Config 'donation_vat_rate' is not set");
+                }
+                $paymentItemContainer->addItem(new DonationPaymentItem($this->translator->translate('payments.admin.donation'), $values['additional_amount'], $donationPaymentVat));
             }
 
             // we don't want to update subscription dates on payment if it's already paid
@@ -442,9 +447,12 @@ class PaymentFormFactory
             }
 
             if ($additionalAmount) {
-                $paymentItemContainer->addItem(new DonationPaymentItem($this->translator->translate('payments.admin.donation'), $additionalAmount, $this->donationPaymentVat));
+                $donationPaymentVat = $this->applicationConfig->get('donation_vat_rate');
+                if ($donationPaymentVat === null) {
+                    throw new \Exception("Config 'donation_vat_rate' is not set");
+                }
+                $paymentItemContainer->addItem(new DonationPaymentItem($this->translator->translate('payments.admin.donation'), $additionalAmount, $donationPaymentVat));
             }
-//            dump($paymentItemContainer); die('pp');
 
             $user = $this->usersRepository->find($values['user_id']);
 

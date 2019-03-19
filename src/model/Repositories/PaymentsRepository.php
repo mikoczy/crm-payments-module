@@ -54,12 +54,9 @@ class PaymentsRepository extends Repository
 
     private $translator;
 
-    private $donationVatRate;
-
     private $cacheRepository;
 
     public function __construct(
-        $donationVatRate,
         Context $database,
         VariableSymbol $variableSymbol,
         SubscriptionTypesRepository $subscriptionTypesRepository,
@@ -86,7 +83,6 @@ class PaymentsRepository extends Repository
         $this->hermesEmitter = $hermesEmitter;
         $this->paymentMetaRepository = $paymentMetaRepository;
         $this->translator = $translator;
-        $this->donationVatRate = $donationVatRate;
         $this->cacheRepository = $cacheRepository;
     }
 
