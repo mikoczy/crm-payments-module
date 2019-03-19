@@ -404,7 +404,7 @@ class PaymentsRepository extends Repository
 
     public function unBundleProducts(ActiveRow $payment, callable $callback)
     {
-        foreach ($payment->related('payment_items') as $paymentItem) {
+        foreach ($payment->related('payment_items')->where('product_id IS NOT NULL') as $paymentItem) {
             if (!$paymentItem->product_id) {
                 continue;
             }
