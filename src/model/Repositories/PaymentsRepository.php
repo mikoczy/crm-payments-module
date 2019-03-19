@@ -402,23 +402,6 @@ class PaymentsRepository extends Repository
         return $this->getTable()->where(['NOT note' => null])->order('created_at DESC');
     }
 
-    public function unBundleProducts(ActiveRow $payment, callable $callback)
-    {
-        foreach ($payment->related('payment_items')->where('product_id IS NOT NULL') as $paymentItem) {
-            if (!$paymentItem->product_id) {
-                continue;
-            }
-            $product = $paymentItem->product;
-            if ($product->bundle) {
-                foreach ($product->related('product_bundles') as $productBundle) {
-                    $callback($productBundle->item, $paymentItem->count, $paymentItem->amount);
-                }
-            } else {
-                $callback($product, $paymentItem->count, $paymentItem->amount);
-            }
-        }
-    }
-
     public function totalCount($allowCached = false, $forceCacheUpdate = false)
     {
         $callable = function () {
