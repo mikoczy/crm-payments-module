@@ -8,6 +8,7 @@ use Crm\PaymentsModule\Repository\PaymentGatewaysRepository;
 use Crm\PaymentsModule\Repository\PaymentsRepository;
 use Crm\SubscriptionsModule\PaymentItem\SubscriptionTypePaymentItem;
 use Crm\SubscriptionsModule\Repository\SubscriptionsRepository;
+use Crm\SubscriptionsModule\Repository\SubscriptionTypesRepository;
 use League\Event\Emitter;
 use Nette\Database\Table\ActiveRow;
 use Nette\Utils\DateTime;
@@ -31,13 +32,19 @@ class PaidExtendUpgrade extends Upgrader
         PaymentsRepository $paymentsRepository,
         PaymentGatewaysRepository $paymentGatewaysRepository,
         SubscriptionsRepository $subscriptionsRepository,
+        SubscriptionTypesRepository $subscriptionTypesRepository,
         Emitter $emitter,
         \Tomaj\Hermes\Emitter $hermesEmitter,
         $dailyFix,
         $trackingParams,
         $salesFunnelId
     ) {
-        parent::__construct($subscriptionTypeUpgrade, $subscriptionsRepository, $emitter);
+        parent::__construct(
+            $subscriptionTypeUpgrade,
+            $subscriptionsRepository,
+            $subscriptionTypesRepository,
+            $emitter
+        );
         $this->paymentGatewaysRepository = $paymentGatewaysRepository;
         $this->paymentsRepository = $paymentsRepository;
         $this->hermesEmitter = $hermesEmitter;

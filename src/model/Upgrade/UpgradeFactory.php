@@ -8,6 +8,7 @@ use Crm\PaymentsModule\Repository\PaymentLogsRepository;
 use Crm\PaymentsModule\Repository\PaymentsRepository;
 use Crm\PaymentsModule\Repository\RecurrentPaymentsRepository;
 use Crm\SubscriptionsModule\Repository\SubscriptionsRepository;
+use Crm\SubscriptionsModule\Repository\SubscriptionTypesRepository;
 use League\Event\Emitter;
 use Nette\Database\Table\ActiveRow;
 use Tomaj\Hermes\Emitter as HermesEmitter;
@@ -21,6 +22,8 @@ class UpgradeFactory
     protected $recurrentPaymentsRepository;
 
     protected $subscriptionsRepository;
+
+    protected $subscriptionTypesRepository;
 
     protected $paymentGatewaysRepository;
 
@@ -41,6 +44,7 @@ class UpgradeFactory
         PaymentLogsRepository $paymentLogsRepository,
         RecurrentPaymentsRepository $recurrentPaymentsRepository,
         SubscriptionsRepository $subscriptionsRepository,
+        SubscriptionTypesRepository $subscriptionTypesRepository,
         PaymentGatewaysRepository $paymentGatewaysRepository,
         Emitter $emitter,
         HermesEmitter $hermesEmitter,
@@ -50,6 +54,7 @@ class UpgradeFactory
         $this->paymentLogsRepository = $paymentLogsRepository;
         $this->recurrentPaymentsRepository = $recurrentPaymentsRepository;
         $this->subscriptionsRepository = $subscriptionsRepository;
+        $this->subscriptionTypesRepository = $subscriptionTypesRepository;
         $this->paymentGatewaysRepository = $paymentGatewaysRepository;
         $this->emitter = $emitter;
         $this->hermesEmitter = $hermesEmitter;
@@ -66,6 +71,7 @@ class UpgradeFactory
                     $this->paymentLogsRepository,
                     $this->recurrentPaymentsRepository,
                     $this->subscriptionsRepository,
+                    $this->subscriptionTypesRepository,
                     $this->emitter,
                     $this->hermesEmitter,
                     $this->gatewayFactory,
@@ -79,6 +85,7 @@ class UpgradeFactory
                     $this->paymentsRepository,
                     $this->recurrentPaymentsRepository,
                     $this->subscriptionsRepository,
+                    $this->subscriptionTypesRepository,
                     $this->emitter,
                     $this->hermesEmitter,
                     $this->dailyFix,
@@ -91,6 +98,7 @@ class UpgradeFactory
                     $this->paymentsRepository,
                     $this->paymentGatewaysRepository,
                     $this->subscriptionsRepository,
+                    $this->subscriptionTypesRepository,
                     $this->emitter,
                     $this->hermesEmitter,
                     $this->dailyFix,
@@ -102,6 +110,7 @@ class UpgradeFactory
                     $subscriptionTypeUpgrade,
                     $this->paymentsRepository,
                     $this->subscriptionsRepository,
+                    $this->subscriptionTypesRepository,
                     $this->emitter,
                     $this->hermesEmitter,
                     $this->dailyFix,

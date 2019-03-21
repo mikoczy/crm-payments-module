@@ -116,7 +116,7 @@ class RecurrentPaymentsChargeCommand extends Command
             }
 
             $subscriptionType = $this->recurrentPaymentsResolver->resolveSubscriptionType($recurrentPayment);
-            $amount = $this->recurrentPaymentsResolver->resolveCustomChargeAmount($recurrentPayment);
+            $customChargeAmount = $this->recurrentPaymentsResolver->resolveCustomChargeAmount($recurrentPayment);
 
             if (isset($recurrentPayment->payment_id) && $recurrentPayment->payment_id != null) {
                 $payment = $this->paymentsRepository->find($recurrentPayment->payment_id);
@@ -129,38 +129,49 @@ class RecurrentPaymentsChargeCommand extends Command
                     $additionalAmount = $parentPayment->additional_amount;
                 }
 
-                $items = [];
+                $paymentItemContainer = new PaymentItemContainer();
+
                 // we want to load previous payment items only if new subscription has same subscription type
                 // and it isn't upgraded recurrent payment
                 if ($subscriptionType->id === $parentPayment->subscription_type_id
                     && !in_array($parentPayment->upgrade_type, [Expander::UPGRADE_RECURRENT, Expander::UPGRADE_RECURRENT_FREE])) {
-                    $items = $this->paymentsRepository->getPaymentItems($parentPayment);
-
-                    foreach ($items as $key => $item) {
+                    foreach ($this->paymentsRepository->getPaymentItems($parentPayment) as $key => $item) {
                         // TODO: unset donation payment item without relying on the name of payment item
-                        // remove donation from items, it will be added by PaymentsRepository->add()
+                        // remove donation from items, it will be added by PaymentsRepository->add().
+                        //
+                        // Possible solution should be to add `recurrent` field to payment_items
+                        // and copy only this items with recurrent flag
+                        // for now this should be ok because we are not selling recurring products
                         if ($item['name'] == $this->translator->translate('payments.admin.donation')
                             && $item['amount'] === $parentPayment->additional_amount) {
-                            unset($items[$key]);
+                            continue;
                         }
-                    }
-                }
 
-                // TODO - remove this code and also generating $items array as well
-                // possible solution should be add `recurrent` field to payment_items
-                // and copy only this items with recurrent flag
-                // for now this should be ok because we are not selling recurring products
-                $paymentItemContainer = new PaymentItemContainer();
-                foreach ($items as $item) {
-                    $paymentItemContainer->addItem(
-                        new SubscriptionTypePaymentItem(
+                        $paymentItemContainer->addItem(new SubscriptionTypePaymentItem(
                             $subscriptionType->id,
                             $item['name'],
                             $item['amount'],
-                            $item['vat']
-                        )
-                    );
+                            $item['vat'],
+                            $item['count']
+                        ));
+                    }
+                } elseif (!$customChargeAmount) {
+                    // if subscription type changed, load the items from new subscription type
+                    $paymentItemContainer->addItems(SubscriptionTypePaymentItem::fromSubscriptionType($subscriptionType));
+                } else {
+                    // we're charging custom amount for subscription
+                    $items = SubscriptionTypePaymentItem::fromSubscriptionType($subscriptionType);
+                    if (count($items) === 1) {
+                        // custom amount is handable only for single-item payments; how would we split the custom amount otherwise?
+                        $paymentItemContainer->addItems($items);
+                    } else {
+                        $msg = 'RecurringPayment_id: ' . $recurrentPayment->id . ' Card_id: ' . $recurrentPayment->cid . ' User_id: ' . $recurrentPayment->user_id . ' Error: Unchargeable custom amount';
+                        Debugger::log($msg, Debugger::EXCEPTION);
+                        $output->writeln('<error>' . $msg . '</error>');
+                        continue;
+                    }
                 }
+
                 if ($additionalType == 'recurrent' && $additionalAmount) {
                     $donationPaymentVat = $this->applicationConfig->get('donation_vat_rate');
                     if ($donationPaymentVat === null) {
@@ -181,7 +192,7 @@ class RecurrentPaymentsChargeCommand extends Command
                     $recurrentPayment->user,
                     $paymentItemContainer,
                     null,
-                    $amount,
+                    $customChargeAmount,
                     null,
                     null,
                     null,
@@ -211,7 +222,7 @@ class RecurrentPaymentsChargeCommand extends Command
                     $recurrentPayment->cid,
                     $payment,
                     $this->recurrentPaymentsRepository->calculateChargeAt($payment),
-                    $amount,
+                    $customChargeAmount,
                     --$retries
                 );
 
@@ -240,7 +251,7 @@ class RecurrentPaymentsChargeCommand extends Command
                     $recurrentPayment->cid,
                     $payment,
                     $nextCharge,
-                    $amount,
+                    $customChargeAmount,
                     $recurrentPayment->retries - 1
                 );
 
@@ -270,7 +281,7 @@ class RecurrentPaymentsChargeCommand extends Command
                     $recurrentPayment->cid,
                     $payment,
                     $nextCharge,
-                    $amount,
+                    $customChargeAmount,
                     $recurrentPayment->retries
                 );
 

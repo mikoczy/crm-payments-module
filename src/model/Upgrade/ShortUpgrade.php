@@ -5,6 +5,7 @@ namespace Crm\PaymentsModule\Upgrade;
 use Crm\ApplicationModule\Hermes\HermesMessage;
 use Crm\PaymentsModule\Repository\PaymentsRepository;
 use Crm\SubscriptionsModule\Repository\SubscriptionsRepository;
+use Crm\SubscriptionsModule\Repository\SubscriptionTypesRepository;
 use League\Event\Emitter;
 use Nette\Database\Table\ActiveRow;
 use Nette\Utils\DateTime;
@@ -25,13 +26,19 @@ class ShortUpgrade extends Upgrader
         ActiveRow $subscriptionTypeUpgrade,
         PaymentsRepository $paymentsRepository,
         SubscriptionsRepository $subscriptionsRepository,
+        SubscriptionTypesRepository $subscriptionTypesRepository,
         Emitter $emitter,
         \Tomaj\Hermes\Emitter $hermesEmitter,
         $dailyFix,
         $trackingParams,
         $salesFunnelId
     ) {
-        parent::__construct($subscriptionTypeUpgrade, $subscriptionsRepository, $emitter);
+        parent::__construct(
+            $subscriptionTypeUpgrade,
+            $subscriptionsRepository,
+            $subscriptionTypesRepository,
+            $emitter
+        );
         $this->paymentsRepository = $paymentsRepository;
         $this->hermesEmitter = $hermesEmitter;
         $this->dailyFix = $dailyFix;

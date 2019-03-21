@@ -10,6 +10,7 @@ use Crm\PaymentsModule\Repository\PaymentsRepository;
 use Crm\PaymentsModule\Repository\RecurrentPaymentsRepository;
 use Crm\SubscriptionsModule\PaymentItem\SubscriptionTypePaymentItem;
 use Crm\SubscriptionsModule\Repository\SubscriptionsRepository;
+use Crm\SubscriptionsModule\Repository\SubscriptionTypesRepository;
 use Exception;
 use League\Event\Emitter;
 use Nette\Database\Table\ActiveRow;
@@ -39,6 +40,7 @@ class PaidRecurrentUpgrade extends Upgrader
         PaymentLogsRepository $paymentLogsRepository,
         RecurrentPaymentsRepository $recurrentPaymentsRepository,
         SubscriptionsRepository $subscriptionsRepository,
+        SubscriptionTypesRepository $subscriptionTypesRepository,
         Emitter $emitter,
         \Tomaj\Hermes\Emitter $hermesEmitter,
         GatewayFactory $gatewayFactory,
@@ -46,7 +48,12 @@ class PaidRecurrentUpgrade extends Upgrader
         $trackingParams,
         $salesFunnelId
     ) {
-        parent::__construct($subscriptionTypeUpgrade, $subscriptionsRepository, $emitter);
+        parent::__construct(
+            $subscriptionTypeUpgrade,
+            $subscriptionsRepository,
+            $subscriptionTypesRepository,
+            $emitter
+        );
         $this->recurrentPaymentsRepository = $recurrentPaymentsRepository;
         $this->paymentsRepository = $paymentsRepository;
         $this->paymentLogsRepository = $paymentLogsRepository;
@@ -144,8 +151,8 @@ class PaidRecurrentUpgrade extends Upgrader
 
         // updatnutneme recurrent na novy subscription type
         $this->recurrentPaymentsRepository->update($recurrentPayment, [
-            'subscription_type_id' => $toSubscriptionType->id,
-            'custom_amount' => $this->getFutureChargePrice(),
+            'next_subscription_type_id' => $toSubscriptionType->id,
+            'custom_amount' => $this->customAmount,
             'parent_payment_id' => $newPayment->id,
             'note' => "Upgradnuty recurrentu z {$actualUserSubscription->subscription_type->name} na {$toSubscriptionType->name}\n(" . time() . ')',
         ]);
@@ -174,14 +181,9 @@ class PaidRecurrentUpgrade extends Upgrader
                 $subscriptionType = $subscriptionType->next_subscription_type;
             }
             $newDayPrice = ($subscriptionType->price / $toSubscriptionType->length) + $this->dailyFix;
-            $futureChargePrice = round($newDayPrice * $toSubscriptionType->length, 2);
+            $this->customAmount = round($newDayPrice * $toSubscriptionType->length, 2);
         } else {
             $newDayPrice = $toSubscriptionType->price / $toSubscriptionType->length;
-            if ($toSubscriptionType->next_subscription_type_id) {
-                $futureChargePrice = $toSubscriptionType->next_subscription_type->price;
-            } else {
-                $futureChargePrice = $toSubscriptionType->price;
-            }
         }
 
         $newPrice = (new DateTime())->diff($actualUserSubscription->end_time)->days * $newDayPrice;
@@ -198,7 +200,6 @@ class PaidRecurrentUpgrade extends Upgrader
         }
 
         $this->chargePrice = $chargePrice;
-        $this->futureChargePrice = $futureChargePrice;
 
         return $chargePrice;
     }
