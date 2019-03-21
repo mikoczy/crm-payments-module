@@ -16,6 +16,7 @@ use Crm\PaymentsModule\PaymentsHistogramFactory;
 use Crm\PaymentsModule\Repository\PaymentGatewaysRepository;
 use Crm\PaymentsModule\Repository\PaymentsRepository;
 use Crm\PaymentsModule\Repository\RecurrentPaymentsRepository;
+use Crm\ProductsModule\PaymentItem\ProductPaymentItem;
 use Crm\SalesFunnelModule\Repository\SalesFunnelsRepository;
 use Crm\SubscriptionsModule\Repository\SubscriptionTypesRepository;
 use Crm\UsersModule\Repository\UsersRepository;
@@ -161,7 +162,7 @@ class PaymentsAdminPresenter extends AdminPresenter
             $start->format('Y-m-01 00:00:00'),
             $end->format('Y-m-01 00:00:00')
         )
-            ->where(':payment_items.product_id IS NOT NULL')
+            ->where(':payment_items.type = ?', ProductPaymentItem::TYPE)
             ->order('created_at DESC')->order('id DESC');
 
         $stats = [];
@@ -174,7 +175,7 @@ class PaymentsAdminPresenter extends AdminPresenter
 
             // we're intentionally not using $this->paymentsRepository->unBundleProducts,
             // because the pricing of individual products doesn't need to match price of the bundle
-            foreach ($payment->related('payment_items')->where('product_id IS NOT NULL') as $paymentItem) {
+            foreach ($payment->related('payment_items')->where('type = ?', ProductPaymentItem::TYPE) as $paymentItem) {
                 if (!$paymentItem->amount) {
                     continue;
                 }
