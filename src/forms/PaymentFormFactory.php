@@ -278,11 +278,6 @@ class PaymentFormFactory
     public function formSucceeded($form, $values)
     {
         $values = clone($values);
-        foreach ($values as $i => $item) {
-            if ($item instanceof \Nette\Utils\ArrayHash) {
-                unset($values[$i]);
-            }
-        }
 
         $subscriptionType = null;
         $subscriptionStartAt = null;
@@ -375,6 +370,14 @@ class PaymentFormFactory
             if ($subscriptionType) {
                 $paymentItemContainer->addItems(SubscriptionTypePaymentItem::fromSubscriptionType($subscriptionType));
             }
+        }
+
+        /** @var PaymentFormDataProviderInterface[] $providers */
+        $providers = $this->dataProviderManager->getProviders('payments.dataprovider.payment_form', PaymentFormDataProviderInterface::class);
+        foreach ($providers as $sorting => $provider) {
+            $paymentItemContainer->addItems($provider->paymentItems([
+                'values' => $values,
+            ]));
         }
 
         if ($payment !== null) {

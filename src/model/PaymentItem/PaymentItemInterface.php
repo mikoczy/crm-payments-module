@@ -8,7 +8,9 @@ interface PaymentItemInterface
 
     public function name(): string;
 
-    public function price(): float;
+    public function unitPrice(): float;
+
+    public function totalPrice(): float;
 
     public function vat(): int;
 

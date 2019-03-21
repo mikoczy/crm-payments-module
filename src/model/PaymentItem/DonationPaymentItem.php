@@ -29,9 +29,14 @@ class DonationPaymentItem implements PaymentItemInterface
         return $this->name;
     }
 
-    public function price(): float
+    public function unitPrice(): float
     {
         return $this->price;
+    }
+
+    public function totalPrice(): float
+    {
+        return $this->unitPrice() * $this->count();
     }
 
     public function vat(): int

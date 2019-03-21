@@ -46,7 +46,7 @@ class PaymentItemsRepository extends Repository
                 'type' => $item->type(),
                 'count' => $item->count(),
                 'name' => $item->name(),
-                'amount' => $item->price(),
+                'amount' => $item->unitPrice(),
                 'vat' => $item->vat(),
                 'created_at' => new DateTime(),
                 'updated_at' => new DateTime(),

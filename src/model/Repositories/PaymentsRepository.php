@@ -136,9 +136,9 @@ class PaymentsRepository extends Repository
         // It's not possible to generate payment amount based on payment items as postal fees of product module were
         // not refactored yet to separate payment item. Therefore custom "$amount" is still allowed.
 
-//        if ($data['amount'] <= 0) {
-//            throw new \Exception('attempt to create payment with zero or negative amount: ' . $data['amount']);
-//        }
+        if ($data['amount'] <= 0) {
+            throw new \Exception('attempt to create payment with zero or negative amount: ' . $data['amount']);
+        }
 
         if ($subscriptionType) {
             $data['subscription_type_id'] = $subscriptionType->id;

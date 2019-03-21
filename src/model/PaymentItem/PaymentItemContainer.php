@@ -33,7 +33,7 @@ class PaymentItemContainer
     {
         $price = 0;
         foreach ($this->items() as $item) {
-            $price += $item->price();
+            $price += $item->totalPrice();
         }
         return $price;
     }
