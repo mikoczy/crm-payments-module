@@ -186,7 +186,7 @@ class PaymentsRepository extends Repository
 
         foreach ($payment->related('payment_items') as $paymentItem) {
             $paymentItemArray = $paymentItem->toArray();
-            $paymentItemArray['payment_id'] = $payment->id;
+            $paymentItemArray['payment_id'] = $newPayment->id;
             unset($paymentItemArray['id']);
             $this->paymentItemsRepository->getTable()->insert($paymentItemArray);
         }
