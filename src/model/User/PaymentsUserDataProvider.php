@@ -3,19 +3,16 @@
 namespace Crm\PaymentsModule\User;
 
 use Crm\ApplicationModule\User\UserDataProviderInterface;
-use Crm\InvoicesModule\InvoiceGenerator;
 use Crm\PaymentsModule\Repository\PaymentsRepository;
 
 class PaymentsUserDataProvider implements UserDataProviderInterface
 {
     private $paymentsRepository;
 
-    private $invoiceGenerator;
-
-    public function __construct(PaymentsRepository $paymentsRepository, InvoiceGenerator $invoiceGenerator)
-    {
+    public function __construct(
+        PaymentsRepository $paymentsRepository
+    ) {
         $this->paymentsRepository = $paymentsRepository;
-        $this->invoiceGenerator = $invoiceGenerator;
     }
 
     public static function identifier(): string
@@ -28,7 +25,6 @@ class PaymentsUserDataProvider implements UserDataProviderInterface
         return [];
     }
 
-    // TODO: orders
     public function download($userId)
     {
         $payments = $this->paymentsRepository->userPayments($userId)->where(['status != ?' => PaymentsRepository::STATUS_FORM]);
@@ -63,17 +59,7 @@ class PaymentsUserDataProvider implements UserDataProviderInterface
 
     public function downloadAttachments($userId)
     {
-        $payments = $this->paymentsRepository->userPayments($userId)->where('invoice_id IS NOT NULL');
-
-        $files = [];
-        foreach ($payments as $payment) {
-            $invoiceFile = tempnam(sys_get_temp_dir(), 'invoice');
-            $this->invoiceGenerator->renderInvoicePDFToFile($invoiceFile, $payment->user, $payment);
-            $fileName = $payment->invoice->invoice_number->number . '.pdf';
-            $files[$fileName] = $invoiceFile;
-        }
-
-        return $files;
+        return [];
     }
 
     public function protect($userId): array
@@ -82,7 +68,6 @@ class PaymentsUserDataProvider implements UserDataProviderInterface
     }
 
     /**
-     * @param $userId
      * @return bool
      * @throws \Exception
      */
