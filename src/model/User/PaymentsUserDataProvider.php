@@ -25,7 +25,6 @@ class PaymentsUserDataProvider implements UserDataProviderInterface
         return [];
     }
 
-    // TODO: orders
     public function download($userId)
     {
         $payments = $this->paymentsRepository->userPayments($userId)->where(['status != ?' => PaymentsRepository::STATUS_FORM]);
