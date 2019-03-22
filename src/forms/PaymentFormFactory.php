@@ -2,10 +2,14 @@
 
 namespace Crm\PaymentsModule\Forms;
 
+use Crm\ApplicationModule\Config\ApplicationConfig;
 use Crm\ApplicationModule\DataProvider\DataProviderManager;
 use Crm\PaymentsModule\DataProvider\PaymentFormDataProviderInterface;
+use Crm\PaymentsModule\PaymentItem\DonationPaymentItem;
+use Crm\PaymentsModule\PaymentItem\PaymentItemContainer;
 use Crm\PaymentsModule\Repository\PaymentGatewaysRepository;
 use Crm\PaymentsModule\Repository\PaymentsRepository;
+use Crm\SubscriptionsModule\PaymentItem\SubscriptionTypePaymentItem;
 use Crm\SubscriptionsModule\Repository\SubscriptionTypesRepository;
 use Crm\SubscriptionsModule\Subscription\SubscriptionType;
 use Crm\UsersModule\Repository\AddressesRepository;
@@ -13,7 +17,7 @@ use Crm\UsersModule\Repository\UsersRepository;
 use Nette\Application\UI\Form;
 use Nette\Database\Table\IRow;
 use Nette\Forms\Controls\TextInput;
-use Nette\Utils\ArrayHash;
+use Nette\Localization\ITranslator;
 use Nette\Utils\DateTime;
 use Nette\Utils\Html;
 use Nette\Utils\Json;
@@ -36,6 +40,10 @@ class PaymentFormFactory
 
     private $dataProviderManager;
 
+    private $applicationConfig;
+
+    private $translator;
+
     public $onSave;
 
     public $onUpdate;
@@ -48,7 +56,9 @@ class PaymentFormFactory
         SubscriptionTypesRepository $subscriptionTypesRepository,
         UsersRepository $usersRepository,
         AddressesRepository $addressesRepository,
-        DataProviderManager $dataProviderManager
+        DataProviderManager $dataProviderManager,
+        ApplicationConfig $applicationConfig,
+        ITranslator $translator
     ) {
         $this->paymentsRepository = $paymentsRepository;
         $this->paymentGatewaysRepository = $paymentGatewaysRepository;
@@ -56,6 +66,8 @@ class PaymentFormFactory
         $this->usersRepository = $usersRepository;
         $this->addressesRepository = $addressesRepository;
         $this->dataProviderManager = $dataProviderManager;
+        $this->applicationConfig = $applicationConfig;
+        $this->translator = $translator;
     }
 
     /**
@@ -266,11 +278,6 @@ class PaymentFormFactory
     public function formSucceeded($form, $values)
     {
         $values = clone($values);
-        foreach ($values as $i => $item) {
-            if ($item instanceof \Nette\Utils\ArrayHash) {
-                unset($values[$i]);
-            }
-        }
 
         $subscriptionType = null;
         $subscriptionStartAt = null;
@@ -337,7 +344,8 @@ class PaymentFormFactory
             unset($values['payment_id']);
         }
 
-        $items = [];
+        $paymentItemContainer = new PaymentItemContainer();
+
         if ((isset($values['custom_payment_items']) && $values['custom_payment_items'])
             || ($payment && $payment->status === 'form')
         ) {
@@ -348,12 +356,28 @@ class PaymentFormFactory
                 if ($item->amount < 0) {
                     $form['subscription_type_id']->addError('Cena položiek musí byť nezáporná');
                 }
-                $items[] = ArrayHash::from([
-                    'amount' => $item->amount,
-                    'name' => $item->name,
-                    'vat' => $item->vat,
-                ]);
+                if ($subscriptionType) {
+                    $paymentItem = new SubscriptionTypePaymentItem(
+                        $subscriptionType->id,
+                        $item->name,
+                        $item->amount,
+                        $item->vat
+                    );
+                    $paymentItemContainer->addItem($paymentItem);
+                }
             }
+        } else {
+            if ($subscriptionType) {
+                $paymentItemContainer->addItems(SubscriptionTypePaymentItem::fromSubscriptionType($subscriptionType));
+            }
+        }
+
+        /** @var PaymentFormDataProviderInterface[] $providers */
+        $providers = $this->dataProviderManager->getProviders('payments.dataprovider.payment_form', PaymentFormDataProviderInterface::class);
+        foreach ($providers as $sorting => $provider) {
+            $paymentItemContainer->addItems($provider->paymentItems([
+                'values' => $values,
+            ]));
         }
 
         if ($payment !== null) {
@@ -369,13 +393,22 @@ class PaymentFormFactory
                 $values['additional_type'] = $payment->additional_type;
             }
 
+            if ($values['additional_amount']) {
+                $donationPaymentVat = $this->applicationConfig->get('donation_vat_rate');
+                if ($donationPaymentVat === null) {
+                    throw new \Exception("Config 'donation_vat_rate' is not set");
+                }
+                $paymentItemContainer->addItem(new DonationPaymentItem($this->translator->translate('payments.admin.donation'), $values['additional_amount'], $donationPaymentVat));
+            }
+
             // we don't want to update subscription dates on payment if it's already paid
             if ($currentStatus === PaymentsRepository::STATUS_FORM) {
                 $values['subscription_start_at'] = $subscriptionStartAt;
                 $values['subscription_end_at'] = $subscriptionEndAt;
             }
 
-            $this->paymentsRepository->update($payment, $values, $items);
+            $this->paymentsRepository->update($payment, $values, $paymentItemContainer);
+
             if ($currentStatus !== $values['status']) {
                 $this->paymentsRepository->updateStatus($payment, $values['status'], $sendNotification);
             }
@@ -402,29 +435,34 @@ class PaymentFormFactory
                 $additionalType = $values['additional_type'];
             }
 
+            if ($additionalAmount) {
+                $donationPaymentVat = $this->applicationConfig->get('donation_vat_rate');
+                if ($donationPaymentVat === null) {
+                    throw new \Exception("Config 'donation_vat_rate' is not set");
+                }
+                $paymentItemContainer->addItem(new DonationPaymentItem($this->translator->translate('payments.admin.donation'), $additionalAmount, $donationPaymentVat));
+            }
+
             $user = $this->usersRepository->find($values['user_id']);
 
             $payment = $this->paymentsRepository->add(
                 $subscriptionType,
                 $paymentGateway,
                 $user,
+                $paymentItemContainer,
                 $values['referer'],
                 null,
                 $subscriptionStartAt,
                 $subscriptionEndAt,
-                null,
+                $values['note'],
                 $additionalAmount,
                 $additionalType,
                 $variableSymbol,
                 $address,
-                false,
-                $items
+                false
             );
 
-            $updateArray = [
-                'amount' => $values['amount'],
-                'note' => $values['note'],
-            ];
+            $updateArray = [];
             if (isset($values['paid_at'])) {
                 $updateArray['paid_at'] = $values['paid_at'];
             }

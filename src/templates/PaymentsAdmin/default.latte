@@ -77,17 +77,18 @@
 			  <td><a href="{plink :Payments:PaymentGatewaysAdmin:Show $payment->payment_gateway_id}">{$payment->payment_gateway->name}</a></td>
 			  <td>
 				<div class="list-group">
-					{var $paymentProducts = $payment->related('payment_products')->fetchAll()}
-					{if $paymentProducts}
-						<a n:foreach="$payment->related('payment_products') as $paymentProduct" class="list-group-item" href="{plink :Products:ProductsAdmin:Show $paymentProduct->product_id}">{$paymentProduct->product->name}
-							<small>({$paymentProduct->count}&nbsp;x&nbsp;{$paymentProduct->price|price})</small>
-						</a>
-						<a n:foreach="$payment->related('orders') as $order" n:if="$order->postal_fee" class="list-group-item" href="#">{$order->postal_fee->title}
-							<small>({$order->postal_fee_amount|price})</small>
-						</a>
+				  {foreach $payment->related('payment_items') as $paymentItem}
+				    {if $paymentItem->subscription_type_id}
+					  <a n:if="$paymentItem->subscription_type_id" class="list-group-item" href="{plink :Subscriptions:SubscriptionTypesAdmin:Show $paymentItem->subscription_type_id}">{$paymentItem->name}</a>
 					{else}
-						<a n:if="$payment->subscription_type_id" class="list-group-item" href="{plink :Subscriptions:SubscriptionTypesAdmin:Show $payment->subscription_type_id}">{$payment->subscription_type->name}</a>
+					  <a class="list-group-item" href="{plink :Products:ProductsAdmin:Show $paymentItem->product_id}">{$paymentItem->name}
+					    <small>({$paymentItem->count}&nbsp;x&nbsp;{$paymentItem->amount|price})</small>
+					  </a>
 					{/if}
+				  {/foreach}
+				  <a n:foreach="$payment->related('orders') as $order" n:if="$order->postal_fee" class="list-group-item" href="#">{$order->postal_fee->title}
+				    <small>({$order->postal_fee_amount|price})</small>
+				  </a>
 				</div>
 			  </td>
 		      <td>

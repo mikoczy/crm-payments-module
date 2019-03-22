@@ -8,9 +8,7 @@ use Nette\DI\CompilerExtension;
 
 final class PaymentsModuleExtension extends CompilerExtension implements ITranslationProvider
 {
-    private $defaults = [
-        'donationVatRate' => 0,
-    ];
+    private $defaults = [];
 
     public function loadConfiguration()
     {
@@ -18,10 +16,6 @@ final class PaymentsModuleExtension extends CompilerExtension implements ITransl
 
         // set default values if user didn't define them
         $this->config = $this->validateConfig($this->defaults);
-        // set extension parameters
-        if (!isset($builder->parameters['donationVatRate'])) {
-            $builder->parameters['donationVatRate'] = $this->config['donationVatRate'];
-        }
 
         // load services from config and register them to Nette\DI Container
         Compiler::loadDefinitions(

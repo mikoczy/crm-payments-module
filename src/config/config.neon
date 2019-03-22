@@ -4,7 +4,7 @@ services:
 			- addModule(Crm\PaymentsModule\PaymentsModule())
 
 	- Crm\PaymentsModule\Repository\PaymentGatewaysRepository
-	- Crm\PaymentsModule\Repository\PaymentsRepository('%donationVatRate%')
+	- Crm\PaymentsModule\Repository\PaymentsRepository
 	- Crm\PaymentsModule\Repository\PaymentGiftCouponsRepository
 	- Crm\PaymentsModule\Repository\PaymentLogsRepository
 	- Crm\PaymentsModule\Repository\PaymentMetaRepository

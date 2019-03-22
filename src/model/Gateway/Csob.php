@@ -48,38 +48,32 @@ class Csob extends GatewayAbstract implements PaymentInterface
     {
         $this->initialize();
 
-        $cart = [];
-        if ($payment->subscription_type) {
-            $cart[] = [
-                'name' => !empty($payment->subscription_type->user_label) ? $payment->subscription_type->user_label : $payment->subscription_type->name,
-                'quantity' => 1,
-                'price' => $payment->amount,
-            ];
-        }
 
-        $products = [];
-        $productsAmount = 0;
-        $productsCount = 0;
-        foreach ($payment->related('payment_products') as $paymentProduct) {
-            $products[] = [
-                'name' => !empty($paymentProduct->product->user_label) ? $paymentProduct->product->user_label : $payment->subscription_type->name,
-                'quantity' => $paymentProduct->count,
-                'price' => $paymentProduct->price * $paymentProduct->count,
-            ];
-            $productsCount += $paymentProduct->count;
-            $productsAmount += $paymentProduct->price * $paymentProduct->count;
-        }
+        $cart = [];
+        $paymentItemsCount = $payment->related('payment_items')->count('*');
 
         // CSOB api limits number of cart products to 2 (https://github.com/csob/paymentgateway/wiki/eAPI-v1.7#cart-items)
         // for now we bundle the products under one cart item if we need to
-        if (count($products) <= 2) {
-            $cart += $products;
-        } else {
+        if ($paymentItemsCount > 2) {
+            $totalAmount = 0;
+            $itemsCount = 0;
+            foreach ($payment->related('payment_items') as $paymentItem) {
+                $totalAmount += $paymentItem->amount * $paymentItem->count;
+                $itemsCount += $paymentItem->count;
+            }
             $cart[] = [
                 'name' => $this->applicationConfig->get('csob_shop_name') ?? $this->applicationConfig->get('site_title'),
-                'quantity' => $productsCount,
-                'price' => $productsAmount,
+                'quantity' => $itemsCount,
+                'price' => $totalAmount,
             ];
+        } else {
+            foreach ($payment->related('payment_items') as $paymentItem) {
+                $cart[] = [
+                    'name' => $paymentItem->name,
+                    'quantity' => $paymentItem->count,
+                    'price' => $paymentItem->amount * $paymentItem->count,
+                ];
+            }
         }
 
         $this->response = $this->gateway->checkout([

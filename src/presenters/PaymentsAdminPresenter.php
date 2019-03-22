@@ -16,6 +16,7 @@ use Crm\PaymentsModule\PaymentsHistogramFactory;
 use Crm\PaymentsModule\Repository\PaymentGatewaysRepository;
 use Crm\PaymentsModule\Repository\PaymentsRepository;
 use Crm\PaymentsModule\Repository\RecurrentPaymentsRepository;
+use Crm\ProductsModule\PaymentItem\ProductPaymentItem;
 use Crm\SubscriptionsModule\Repository\SubscriptionTypesRepository;
 use Crm\UsersModule\Repository\UsersRepository;
 use DateTime;
@@ -154,7 +155,7 @@ class PaymentsAdminPresenter extends AdminPresenter
             $start->format('Y-m-01 00:00:00'),
             $end->format('Y-m-01 00:00:00')
         )
-            ->where(':payment_products.product_id IS NOT NULL')
+            ->where(':payment_items.type = ?', ProductPaymentItem::TYPE)
             ->order('created_at DESC')->order('id DESC');
 
         $stats = [];
@@ -165,24 +166,24 @@ class PaymentsAdminPresenter extends AdminPresenter
         foreach ($payments as $payment) {
             $paymentSum = 0;
 
-            // we're intentionally not using $this->paymentsRepository->unbundleProducts,
+            // we're intentionally not using $this->paymentsRepository->unBundleProducts,
             // because the pricing of individual products doesn't need to match price of the bundle
-            foreach ($payment->related('payment_products') as $paymentProduct) {
-                if (!$paymentProduct->price) {
+            foreach ($payment->related('payment_items')->where('type = ?', ProductPaymentItem::TYPE) as $paymentItem) {
+                if (!$paymentItem->amount) {
                     continue;
                 }
 
-                $product = $paymentProduct->product;
+                $product = $paymentItem->product;
                 if (!isset($stats['product_sums'][$product->id])) {
                     $stats['product_sums'][$product->id] = [];
                 }
-                if (!isset($stats['product_sums'][$product->id][strval($paymentProduct->price)])) {
-                    $stats['product_sums'][$product->id][strval($paymentProduct->price)] = 0;
+                if (!isset($stats['product_sums'][$product->id][strval($paymentItem->amount)])) {
+                    $stats['product_sums'][$product->id][strval($paymentItem->amount)] = 0;
                 }
                 $stats['products'][$product->id] = $product;
-                $stats['product_sums'][$product->id][strval($paymentProduct->price)] += $paymentProduct->count * $paymentProduct->price;
-                $paymentSum += $paymentProduct->count * $paymentProduct->price;
-                $total += $paymentProduct->count * $paymentProduct->price;
+                $stats['product_sums'][$product->id][strval($paymentItem->amount)] += $paymentItem->count * $paymentItem->amount;
+                $paymentSum += $paymentItem->count * $paymentItem->amount;
+                $total += $paymentItem->count * $paymentItem->amount;
             }
 
             foreach ($payment->related('orders') as $order) {
@@ -322,18 +323,13 @@ class PaymentsAdminPresenter extends AdminPresenter
 SELECT
   payments.id, 
   amount, 
-  COALESCE(payment_items, 0) AS payment_items_sum, 
-  COALESCE(payment_products, 0) AS payment_products_sum, 
+  COALESCE(payment_items, 0) AS payment_items_sum,  
   COALESCE(postal_fees, 0) AS postal_fees_sum
 FROM payments
 
 LEFT JOIN (
-  SELECT payment_id, SUM(amount) AS payment_items FROM payment_items GROUP BY payment_id
+  SELECT payment_id, SUM(amount*count) AS payment_items FROM payment_items GROUP BY payment_id
 ) t1 ON payments.id = t1.payment_id
-
-LEFT JOIN (
-  SELECT payment_id, SUM(price*count) AS payment_products FROM payment_products GROUP BY payment_id
-) t2 ON payments.id = t2.payment_id
 
 LEFT JOIN (
   SELECT payment_id, SUM(postal_fee_amount) AS postal_fees FROM orders GROUP BY payment_id
@@ -341,7 +337,7 @@ LEFT JOIN (
 
 WHERE payments.id IN ({$filter->getSql()})
 GROUP BY payments.id
-HAVING payment_items_sum + payment_products_sum + postal_fees_sum != payments.amount
+HAVING payment_items_sum + postal_fees_sum != payments.amount
 SQL;
         $checksum = $this->paymentsRepository->getDatabase()->queryArgs($sql, $filter->getSqlBuilder()->getParameters());
 
@@ -408,7 +404,7 @@ SQL;
                         $paymentItem->name,
                         $paymentItem->vat,
                         number_format($paymentItem->amount, 2, ',', ''),
-                        1,
+                        $paymentItem->count,
                         $payment->status,
                         $payment->payment_gateway_id,
                         $payment->subscription_type_id,
@@ -427,41 +423,7 @@ SQL;
                         $address ? $address->zip : '',
                         $payment->note,
                     ];
-                    $actualAmount += $paymentItem->amount;
-
-                    echo  $this->formatExportLine($row);
-                }
-
-                $paymentProducts = $payment->related('payment_products');
-                foreach ($paymentProducts as $paymentProduct) {
-                    $row = [
-                        $payment->id,
-                        $payment->modified_at->format('d.m.Y H:i:s'),
-                        $payment->paid_at ? $payment->paid_at->format('d.m.Y H:i:s') : '',
-                        $payment->variable_symbol,
-                        $paymentProduct->product->name,
-                        $paymentProduct->vat,
-                        number_format($paymentProduct->price, 2, ',', ''),
-                        $paymentProduct->count,
-                        $payment->status,
-                        $payment->payment_gateway_id,
-                        $payment->subscription_type_id,
-                        $payment->user_id,
-                        $payment->user->email,
-                        $payment->referer,
-                        $payment->subscription_id ? $payment->subscription->start_time->format('d.m.Y') : '',
-                        $payment->subscription_id ? $payment->subscription->end_time->format('d.m.Y') : '',
-                        $payment->invoice_id ? $payment->invoice->invoice_number->number : '',
-                        $address ? $address->first_name : '',
-                        $address ? $address->last_name : '',
-                        $address ? $address->company_name : '',
-                        $address ? $address->address : '',
-                        $address ? $address->number : '',
-                        $address ? $address->city : '',
-                        $address ? $address->zip : '',
-                        $payment->note,
-                    ];
-                    $actualAmount += $paymentProduct->price * $paymentProduct->count;
+                    $actualAmount += $paymentItem->amount * $paymentItem->count;
 
                     echo  $this->formatExportLine($row);
                 }

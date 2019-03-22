@@ -9,6 +9,7 @@ use Crm\ApplicationModule\Repository\AuditLogRepository;
 use Crm\ApplicationModule\Request;
 use Crm\PaymentsModule\Events\NewPaymentEvent;
 use Crm\PaymentsModule\Events\PaymentChangeStatusEvent;
+use Crm\PaymentsModule\PaymentItem\PaymentItemContainer;
 use Crm\PaymentsModule\VariableSymbolVariant;
 use Crm\SubscriptionsModule\Repository\SubscriptionsRepository;
 use Crm\SubscriptionsModule\Repository\SubscriptionTypesRepository;
@@ -53,12 +54,9 @@ class PaymentsRepository extends Repository
 
     private $translator;
 
-    private $donationVatRate;
-
     private $cacheRepository;
 
     public function __construct(
-        $donationVatRate,
         Context $database,
         VariableSymbol $variableSymbol,
         SubscriptionTypesRepository $subscriptionTypesRepository,
@@ -85,7 +83,6 @@ class PaymentsRepository extends Repository
         $this->hermesEmitter = $hermesEmitter;
         $this->paymentMetaRepository = $paymentMetaRepository;
         $this->translator = $translator;
-        $this->donationVatRate = $donationVatRate;
         $this->cacheRepository = $cacheRepository;
     }
 
@@ -93,6 +90,7 @@ class PaymentsRepository extends Repository
         ActiveRow $subscriptionType = null,
         ActiveRow $paymentGateway,
         ActiveRow $user,
+        PaymentItemContainer $paymentItemContainer,
         $referer = null,
         $amount = null,
         DateTime $subscriptionStartAt = null,
@@ -103,7 +101,6 @@ class PaymentsRepository extends Repository
         $variableSymbol = null,
         IRow $address = null,
         $recurrentCharge = false,
-        $paymentItems = [],
         $invoiceable = true
     ) {
         $data = [
@@ -125,41 +122,32 @@ class PaymentsRepository extends Repository
             'recurrent_charge' => $recurrentCharge,
             'invoiceable' => $invoiceable,
         ];
-        if ($subscriptionType) {
-            $data['amount'] = $subscriptionType->price;
-            $data['subscription_type_id'] = $subscriptionType->id;
-        }
+
+        // TODO: Additional type/amount fields are only informative and should be replaced with single/recurrent flag
+        // directly on payment_items and be removed from here. additional_amount should not affect total amount anymore.
+
+        // If amount is not provided, it's calculated based on payment items in container.
         if ($amount) {
             $data['amount'] = $amount;
+        } else {
+            $data['amount'] = $paymentItemContainer->totalPrice();
         }
-        if (isset($data['amount']) && $additionalAmount) {
-            $data['amount'] += $additionalAmount;
+
+        // It's not possible to generate payment amount based on payment items as postal fees of product module were
+        // not refactored yet to separate payment item. Therefore custom "$amount" is still allowed.
+
+        if ($data['amount'] <= 0) {
+            throw new \Exception('attempt to create payment with zero or negative amount: ' . $data['amount']);
         }
+
+        if ($subscriptionType) {
+            $data['subscription_type_id'] = $subscriptionType->id;
+        }
+
         /** @var ActiveRow $payment */
         $payment = $this->insert($data);
 
-        // subscriptions
-        if (!empty($paymentItems)) {
-            foreach ($paymentItems as $item) {
-                $this->paymentItemsRepository->add(
-                    $payment,
-                    $item['name'],
-                    $item['amount'],
-                    $item['vat'],
-                    $payment->subscription_type_id
-                );
-            }
-        } elseif ($payment->subscription_type_id) {
-            $subscriptionTypeItems = $payment->subscription_type->related('subscription_type_items')->order('sorting');
-            foreach ($subscriptionTypeItems as $subscriptionTypeItem) {
-                $this->paymentItemsRepository->add($payment, $subscriptionTypeItem->name, $subscriptionTypeItem->amount, $subscriptionTypeItem->vat, $payment->subscription_type_id);
-            }
-        }
-
-        // donations
-        if ($payment->additional_amount) {
-            $this->paymentItemsRepository->add($payment, $this->translator->translate('payments.admin.donation'), $payment->additional_amount, $this->donationVatRate, null);
-        }
+        $this->paymentItemsRepository->add($payment, $paymentItemContainer);
 
         $this->emitter->emit(new NewPaymentEvent($payment));
         return $payment;
@@ -197,13 +185,10 @@ class PaymentsRepository extends Repository
         ]);
 
         foreach ($payment->related('payment_items') as $paymentItem) {
-            $this->paymentItemsRepository->add(
-                $newPayment,
-                $paymentItem->name,
-                $paymentItem->amount,
-                $paymentItem->vat,
-                $paymentItem->subscription_type_id
-            );
+            $paymentItemArray = $paymentItem->toArray();
+            $paymentItemArray['payment_id'] = $payment->id;
+            unset($paymentItemArray['id']);
+            $this->paymentItemsRepository->getTable()->insert($paymentItemArray);
         }
 
         return $newPayment;
@@ -217,26 +202,17 @@ class PaymentsRepository extends Repository
                 'name' => $paymentItem->name,
                 'amount' => $paymentItem->amount,
                 'vat' => $paymentItem->vat,
+                'count' => $paymentItem->count,
             ];
         }
         return $items;
     }
 
-    public function update(IRow &$row, $data, $paymentItems = [])
+    public function update(IRow &$row, $data, PaymentItemContainer $paymentItemContainer = null)
     {
-        $paymentId = $row->id;
-        if (!empty($paymentItems)) {
-            $this->paymentItemsRepository->deleteForPaymentId($paymentId);
-
-            foreach ($paymentItems as $item) {
-                $this->paymentItemsRepository->add(
-                    $row,
-                    $item['name'],
-                    $item['amount'],
-                    $item['vat'],
-                    $row->subscription_type_id
-                );
-            }
+        if ($paymentItemContainer) {
+            $this->paymentItemsRepository->deleteByPayment($row);
+            $this->paymentItemsRepository->add($row, $paymentItemContainer);
         }
 
         $values['modified_at'] = new DateTime();
@@ -425,20 +401,6 @@ class PaymentsRepository extends Repository
     public function getPaymentsWithNotes()
     {
         return $this->getTable()->where(['NOT note' => null])->order('created_at DESC');
-    }
-
-    public function unbundleProducts(ActiveRow $payment, callable $callback)
-    {
-        foreach ($payment->related('payment_products') as $paymentProduct) {
-            $product = $paymentProduct->product;
-            if ($product->bundle) {
-                foreach ($product->related('product_bundles') as $productBundle) {
-                    $callback($productBundle->item, $paymentProduct->count, $paymentProduct->price);
-                }
-            } else {
-                $callback($product, $paymentProduct->count, $paymentProduct->price);
-            }
-        }
     }
 
     public function totalCount($allowCached = false, $forceCacheUpdate = false)

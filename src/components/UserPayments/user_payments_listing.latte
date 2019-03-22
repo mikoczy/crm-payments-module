@@ -34,13 +34,21 @@
         <td>{$payment->payment_gateway->name}</td>
         <td>
           <div class="list-group">
-            <a n:foreach="$payment->related('payment_items') as $paymentItem"
-                    href="{if $paymentItem->subscription_type_id}{plink :Subscriptions:SubscriptionTypesAdmin:Show $payment->subscription_type_id}{else}{plink :Payments:PaymentsAdmin:Edit $payment->id, $payment->user_id}{/if}"
-                    class="list-group-item">
-              {$paymentItem->name}
-            </a>
-
-            <a n:foreach="$payment->related('payment_products') as $paymentProduct" class="list-group-item" href="{plink :Products:ProductsAdmin:Show $paymentProduct->product_id}">{$paymentProduct->product->name}</a>
+            {foreach $payment->related('payment_items') as $paymentItem}
+              {if $paymentItem->subscription_type_id}
+                <a href="{plink :Subscriptions:SubscriptionTypesAdmin:Show $paymentItem->subscription_type_id}" class="list-group-item">
+                  {$paymentItem->name} <small>({$paymentItem->count} x {$paymentItem->amount|price})</small>
+                </a>
+              {elseif $paymentItem->product_id}
+                <a href="{plink :Products:ProductsAdmin:Show $paymentItem->product_id}" class="list-group-item">
+                  {$paymentItem->name} <small>({$paymentItem->count} x {$paymentItem->amount|price})</small>
+                </a>
+              {else}
+                <a href="{plink :Payments:PaymentsAdmin:Edit $payment->id, $payment->user_id}" class="list-group-item">
+                  {$paymentItem->name} <small>({$paymentItem->count} x {$paymentItem->amount|price})</small>
+                </a>
+              {/if}
+            {/foreach}
 
             {if $payment->address_id}
               Adresa: <a href="{plink :Users:AddressAdmin:edit $payment->address_id}">#{$payment->address_id}</a>

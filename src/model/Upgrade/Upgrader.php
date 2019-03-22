@@ -6,6 +6,7 @@ use Crm\SubscriptionsModule\Events\NewSubscriptionEvent;
 use Crm\SubscriptionsModule\Events\SubscriptionEndsEvent;
 use Crm\SubscriptionsModule\Events\SubscriptionStartsEvent;
 use Crm\SubscriptionsModule\Repository\SubscriptionsRepository;
+use Crm\SubscriptionsModule\Repository\SubscriptionTypesRepository;
 use League\Event\Emitter;
 use Nette\Database\Table\ActiveRow;
 use Nette\Utils\DateTime;
@@ -16,11 +17,19 @@ abstract class Upgrader
 
     protected $subscriptionsRepository;
 
+    protected $subscriptionTypesRepository;
+
     protected $emitter;
 
     protected $chargePrice;
 
-    protected $futureChargePrice;
+    /**
+     * @var float custom charge price
+     *
+     * Variable should be set only when the future charge price differs from standard subscription price
+     * we're upgrading to. It's meant to be used as custom_amount field of the recurrent payment instance.
+     */
+    protected $customAmount;
 
     protected $alteredEndTime;
 
@@ -29,10 +38,12 @@ abstract class Upgrader
     public function __construct(
         ActiveRow $subscriptionTypeUpgrade,
         SubscriptionsRepository $subscriptionsRepository,
+        SubscriptionTypesRepository $subscriptionTypesRepository,
         Emitter $emitter
     ) {
         $this->subscriptionTypeUpgrade = $subscriptionTypeUpgrade;
         $this->subscriptionsRepository = $subscriptionsRepository;
+        $this->subscriptionTypesRepository = $subscriptionTypesRepository;
         $this->emitter = $emitter;
 
         $this->browserId = (isset($_COOKIE['browser_id']) ? $_COOKIE['browser_id'] : null);
@@ -89,12 +100,23 @@ abstract class Upgrader
         return $this->alteredEndTime;
     }
 
-    public function getFutureChargePrice()
+    /**
+     * @return float getFutureChargePrice returns amount of money to be charged in the next recurring payment.
+     *
+     * If the $customAmount is set by upgrader implementation, this amount is returned and used by recurrent payment.
+     * Otherwise the future charge price is deducted from subscription type we're upgrading to.
+     */
+    public function getFutureChargePrice(): float
     {
-        if (!isset($this->futureChargePrice)) {
-            throw new \Exception('calculateChargePrice() was not called for this instance of Upgrader or futureChargePrice was just not set.');
+        if (isset($this->customAmount)) {
+            return $this->customAmount;
         }
-        return $this->futureChargePrice;
+
+        $subscriptionType = $this->getToSubscriptionType();
+        if ($subscriptionType->next_subscription_type_id) {
+            $subscriptionType = $this->subscriptionTypesRepository->find($subscriptionType->next_subscription_type_id);
+        }
+        return $subscriptionType->price;
     }
 
     protected function splitSubscription(

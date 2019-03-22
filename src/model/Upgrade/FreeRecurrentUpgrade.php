@@ -6,6 +6,7 @@ use Crm\ApplicationModule\Hermes\HermesMessage;
 use Crm\PaymentsModule\Repository\PaymentsRepository;
 use Crm\PaymentsModule\Repository\RecurrentPaymentsRepository;
 use Crm\SubscriptionsModule\Repository\SubscriptionsRepository;
+use Crm\SubscriptionsModule\Repository\SubscriptionTypesRepository;
 use League\Event\Emitter;
 use Nette\Database\Table\ActiveRow;
 use Nette\Utils\DateTime;
@@ -29,13 +30,19 @@ class FreeRecurrentUpgrade extends Upgrader
         PaymentsRepository $paymentsRepository,
         RecurrentPaymentsRepository $recurrentPaymentsRepository,
         SubscriptionsRepository $subscriptionsRepository,
+        SubscriptionTypesRepository $subscriptionTypesRepository,
         Emitter $emitter,
         \Tomaj\Hermes\Emitter $hermesEmitter,
         $dailyFix,
         $trackingParams,
         $salesFunnelId
     ) {
-        parent::__construct($subscriptionTypeUpgrade, $subscriptionsRepository, $emitter);
+        parent::__construct(
+            $subscriptionTypeUpgrade,
+            $subscriptionsRepository,
+            $subscriptionTypesRepository,
+            $emitter
+        );
         $this->recurrentPaymentsRepository = $recurrentPaymentsRepository;
         $this->paymentsRepository = $paymentsRepository;
         $this->hermesEmitter = $hermesEmitter;
@@ -79,8 +86,8 @@ class FreeRecurrentUpgrade extends Upgrader
             'upgrade_type' => Expander::UPGRADE_RECURRENT_FREE,
         ]);
         $this->recurrentPaymentsRepository->update($recurrentPayment, [
-            'subscription_type_id' => $toSubscriptionType->id,
-            'custom_amount' => $this->getFutureChargePrice(),
+            'next_subscription_type_id' => $toSubscriptionType->id,
+            'custom_amount' => $this->customAmount,
             'note' => $note . "\n(" . time() . ')',
         ]);
 
@@ -107,14 +114,10 @@ class FreeRecurrentUpgrade extends Upgrader
                 $subscriptionType = $subscriptionType->next_subscription_type;
             }
             $newDayPrice = ($subscriptionType->price / $toSubscriptionType->length) + $this->dailyFix;
-            $futureChargePrice = round($newDayPrice * $toSubscriptionType->length, 2);
-        } else {
-            $futureChargePrice = $toSubscriptionType->price;
+            $this->customAmount = round($newDayPrice * $toSubscriptionType->length, 2);
         }
 
         $this->chargePrice = 0.0;
-        $this->futureChargePrice = $futureChargePrice;
-
         return $this->chargePrice;
     }
 }
