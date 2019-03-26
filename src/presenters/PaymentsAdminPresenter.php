@@ -346,7 +346,6 @@ SQL;
             POZOR! - v uctovnickom exporte nesedi suma itemov so sumou platby! 
             [payment#{$invalidPayment->id} {$invalidPayment->amount} vs. 
             [items {$invalidPayment->payment_items_sum}] + 
-            [products {$invalidPayment->payment_products_sum}] + 
             [fees {$invalidPayment->postal_fees_sum}]");
         }
 
