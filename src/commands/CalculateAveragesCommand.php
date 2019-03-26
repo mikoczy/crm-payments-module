@@ -2,6 +2,7 @@
 
 namespace Crm\PaymentsModule\Commands;
 
+use Crm\ProductsModule\PaymentItem\ProductPaymentItem;
 use Nette\Database\Context;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
@@ -31,7 +32,7 @@ ON DUPLICATE KEY UPDATE `updated_at`=NOW(), `value`=VALUES(value)
 ");
 
         $this->database->query("INSERT INTO user_meta (`user_id`,`key`,`value`,`created_at`,`updated_at`) 
-SELECT id,'product_payments',(SELECT COUNT(DISTINCT(payments.id)) FROM payments INNER JOIN payment_products ON payment_products.payment_id = payments.id WHERE payments.status='paid' AND payments.user_id = users.id),NOW(),NOW()
+SELECT id,'product_payments',(SELECT COUNT(DISTINCT(payments.id)) FROM payments INNER JOIN payment_items ON payment_items.payment_id = payments.id AND payment_items.type = '" . ProductPaymentItem::TYPE . "' WHERE payments.status='paid' AND payments.user_id = users.id),NOW(),NOW()
 FROM users
 ON DUPLICATE KEY UPDATE `updated_at`=NOW(), `value`=VALUES(value);
 ");
