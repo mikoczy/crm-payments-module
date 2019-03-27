@@ -75,7 +75,7 @@ class RecurrentPaymentsChargeCommand extends Command
     protected function configure()
     {
         $this->setName('payments:charge')
-            ->setDescription('Checks and charges cards')
+            ->setDescription("Charges recurrent payments ready to be charged. It's highly recommended to use flock or similar tool to prevent multiple instances of this command running.")
             ->addArgument(
                 'charge',
                 null,
@@ -91,14 +91,6 @@ class RecurrentPaymentsChargeCommand extends Command
         $output->writeln('');
         $output->writeln('<info>***** Recurrent Payment *****</info>');
         $output->writeln('');
-
-        $pids = false;
-        $projectPath = realpath(__DIR__ . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . ".." . DIRECTORY_SEPARATOR . "..");
-        exec('ps uax | grep "payments:charge" | grep -v grep | grep "' . $projectPath . '"', $pids);
-        if (count($pids) > 1) {
-            $output->writeln('Charging is already running, not proceeding.');
-            return;
-        }
 
         $chargeableRecurrentPayments = $this->recurrentPaymentsRepository->getChargeablePayments();
 
