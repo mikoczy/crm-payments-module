@@ -87,9 +87,3 @@ services:
 	- Crm\PaymentsModule\DataProvider\SubscriptionsWithActiveUnchargedRecurrentEndingWithinPeriodDataProvider
 	- Crm\PaymentsModule\DataProvider\SubscriptionsWithoutExtensionEndingWithinPeriodDataProvider
 	- Crm\PaymentsModule\Subscription\ActualPaymentSubscription
-
-	# zlavomat
-	- Crm\PaymentsModule\Gateways\Zlavomat
-
-	# viamo
-	- Crm\PaymentsModule\Gateways\Viamo
