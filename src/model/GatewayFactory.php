@@ -7,6 +7,7 @@ use Crm\PaymentsModule\Gateways\RecurrentPaymentInterface;
 use Nette\DI\Container;
 use Nette\Utils\Strings;
 
+// TODO: [payments_module] refactor - registration of payment gateways should be in modules (see remp/crm#649)
 class GatewayFactory
 {
     protected $container;
