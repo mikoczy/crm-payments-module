@@ -19,7 +19,6 @@ use Crm\PaymentsModule\Repository\PaymentsRepository;
 use Crm\PaymentsModule\Repository\RecurrentPaymentsRepository;
 use Crm\PaymentsModule\Upgrade\Expander;
 use Crm\SubscriptionsModule\PaymentItem\SubscriptionTypePaymentItem;
-use Crm\SubscriptionsModule\Repository\SubscriptionTypesRepository;
 use League\Event\Emitter;
 use Nette\Localization\ITranslator;
 use Nette\Utils\DateTime;
@@ -34,8 +33,6 @@ class RecurrentPaymentsChargeCommand extends Command
     private $recurrentPaymentsRepository;
 
     private $paymentsRepository;
-
-    private $subscriptionTypesRepository;
 
     private $gatewayFactory;
 
@@ -52,7 +49,6 @@ class RecurrentPaymentsChargeCommand extends Command
     public function __construct(
         RecurrentPaymentsRepository $recurrentPaymentsRepository,
         PaymentsRepository $paymentsRepository,
-        SubscriptionTypesRepository $subscriptionTypesRepository,
         GatewayFactory $gatewayFactory,
         PaymentLogsRepository $paymentLogsRepository,
         Emitter $emitter,
@@ -62,7 +58,6 @@ class RecurrentPaymentsChargeCommand extends Command
     ) {
         parent::__construct();
         $this->recurrentPaymentsRepository = $recurrentPaymentsRepository;
-        $this->subscriptionTypesRepository = $subscriptionTypesRepository;
         $this->paymentsRepository = $paymentsRepository;
         $this->gatewayFactory = $gatewayFactory;
         $this->paymentLogsRepository = $paymentLogsRepository;
