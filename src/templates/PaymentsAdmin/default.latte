@@ -80,15 +80,17 @@
 				  {foreach $payment->related('payment_items') as $paymentItem}
 				    {if $paymentItem->subscription_type_id}
 					  <a n:if="$paymentItem->subscription_type_id" class="list-group-item" href="{plink :Subscriptions:SubscriptionTypesAdmin:Show $paymentItem->subscription_type_id}">{$paymentItem->name}</a>
-					{else}
+					{elseif $paymentItem->product_id}
 					  <a class="list-group-item" href="{plink :Products:ProductsAdmin:Show $paymentItem->product_id}">{$paymentItem->name}
 					    <small>({$paymentItem->count}&nbsp;x&nbsp;{$paymentItem->amount|price})</small>
 					  </a>
+					{else}
+					  <div class="list-group-item">
+						  {$paymentItem->name}
+						  <small>({$paymentItem->count} x {$paymentItem->amount|price})</small>
+					  </div>
 					{/if}
 				  {/foreach}
-				  <a n:foreach="$payment->related('orders') as $order" n:if="$order->postal_fee" class="list-group-item" href="#">{$order->postal_fee->title}
-				    <small>({$order->postal_fee_amount|price})</small>
-				  </a>
 				</div>
 			  </td>
 		      <td>

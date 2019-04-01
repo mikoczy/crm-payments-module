@@ -16,6 +16,7 @@ use Crm\PaymentsModule\PaymentsHistogramFactory;
 use Crm\PaymentsModule\Repository\PaymentGatewaysRepository;
 use Crm\PaymentsModule\Repository\PaymentsRepository;
 use Crm\PaymentsModule\Repository\RecurrentPaymentsRepository;
+use Crm\ProductsModule\PaymentItem\PostalFeePaymentItem;
 use Crm\ProductsModule\PaymentItem\ProductPaymentItem;
 use Crm\SubscriptionsModule\Repository\SubscriptionTypesRepository;
 use Crm\UsersModule\Repository\UsersRepository;
@@ -186,20 +187,17 @@ class PaymentsAdminPresenter extends AdminPresenter
                 $total += $paymentItem->count * $paymentItem->amount;
             }
 
-            foreach ($payment->related('orders') as $order) {
-                if (!$order->postal_fee_id) {
-                    continue;
+            foreach ($payment->related('payment_items')->where('type = ?', PostalFeePaymentItem::TYPE) as $paymentItem) {
+                if (!isset($stats['postal_fee_sums'][$paymentItem->postal_fee_id])) {
+                    $stats['postal_fee_sums'][$paymentItem->postal_fee_id] = [];
                 }
-                if (!isset($stats['postal_fee_sums'][$order->postal_fee_id])) {
-                    $stats['postal_fee_sums'][$order->postal_fee_id] = [];
+                if (!isset($stats['postal_fee_sums'][$paymentItem->postal_fee_id][strval($paymentItem->amount)])) {
+                    $stats['postal_fee_sums'][$paymentItem->postal_fee_id][strval($paymentItem->amount)] = 0.0;
                 }
-                if (!isset($stats['postal_fee_sums'][$order->postal_fee_id][strval($order->postal_fee_amount)])) {
-                    $stats['postal_fee_sums'][$order->postal_fee_id][strval($order->postal_fee_amount)] = 0.0;
-                }
-                $stats['postal_fees'][$order->postal_fee_id] = $order->postal_fee;
-                $stats['postal_fee_sums'][$order->postal_fee_id][strval($order->postal_fee_amount)] += floatval($order->postal_fee_amount);
-                $total += $order->postal_fee_amount;
-                $paymentSum += $order->postal_fee_amount;
+                $stats['postal_fees'][$paymentItem->postal_fee_id] = $paymentItem->postal_fee;
+                $stats['postal_fee_sums'][$paymentItem->postal_fee_id][strval($paymentItem->amount)] += floatval($paymentItem->amount * $paymentItem->count);
+                $total += $paymentItem->amount * $paymentItem->count;
+                $paymentSum += $paymentItem->amount * $paymentItem->count;
             }
             if (round($paymentSum, 2) != $payment->amount) {
                 $badPayments[] = [
@@ -323,21 +321,16 @@ class PaymentsAdminPresenter extends AdminPresenter
 SELECT
   payments.id, 
   amount, 
-  COALESCE(payment_items, 0) AS payment_items_sum,  
-  COALESCE(postal_fees, 0) AS postal_fees_sum
+  COALESCE(payment_items, 0) AS payment_items_sum  
 FROM payments
 
 LEFT JOIN (
   SELECT payment_id, SUM(amount*count) AS payment_items FROM payment_items GROUP BY payment_id
 ) t1 ON payments.id = t1.payment_id
 
-LEFT JOIN (
-  SELECT payment_id, SUM(postal_fee_amount) AS postal_fees FROM orders GROUP BY payment_id
-) t3 ON payments.id = t3.payment_id
-
 WHERE payments.id IN ({$filter->getSql()})
 GROUP BY payments.id
-HAVING payment_items_sum + postal_fees_sum != payments.amount
+HAVING payment_items_sum != payments.amount
 SQL;
         $checksum = $this->paymentsRepository->getDatabase()->queryArgs($sql, $filter->getSqlBuilder()->getParameters());
 
@@ -345,8 +338,7 @@ SQL;
             throw new \Exception("
             POZOR! - v uctovnickom exporte nesedi suma itemov so sumou platby! 
             [payment#{$invalidPayment->id} {$invalidPayment->amount} vs. 
-            [items {$invalidPayment->payment_items_sum}] + 
-            [fees {$invalidPayment->postal_fees_sum}]");
+            [items {$invalidPayment->payment_items_sum}]");
         }
 
         // actual export
@@ -423,40 +415,6 @@ SQL;
                         $payment->note,
                     ];
                     $actualAmount += $paymentItem->amount * $paymentItem->count;
-
-                    echo  $this->formatExportLine($row);
-                }
-
-                $paymentOrders = $payment->related('orders')->where(['postal_fee_id IS NOT NULL']);
-                foreach ($paymentOrders as $paymentOrder) {
-                    $row = [
-                        $payment->id,
-                        $payment->modified_at->format('d.m.Y H:i:s'),
-                        $payment->paid_at ? $payment->paid_at->format('d.m.Y H:i:s') : '',
-                        $payment->variable_symbol,
-                        $paymentOrder->postal_fee->title,
-                        $this->applicationConfig->get("vat_lower_level"), // TODO - nacitat z inakade
-                        number_format($paymentOrder->postal_fee_amount, 2, ',', ''),
-                        1,
-                        $payment->status,
-                        $payment->payment_gateway_id,
-                        $payment->subscription_type_id,
-                        $payment->user_id,
-                        $payment->user->email,
-                        $payment->referer,
-                        $payment->subscription_id ? $payment->subscription->start_time->format('d.m.Y') : '',
-                        $payment->subscription_id ? $payment->subscription->end_time->format('d.m.Y') : '',
-                        $payment->invoice_id ? $payment->invoice->invoice_number->number : '',
-                        $address ? $address->first_name : '',
-                        $address ? $address->last_name : '',
-                        $address ? $address->company_name : '',
-                        $address ? $address->address : '',
-                        $address ? $address->number : '',
-                        $address ? $address->city : '',
-                        $address ? $address->zip : '',
-                        $payment->note,
-                    ];
-                    $actualAmount += $paymentOrder->postal_fee_amount;
 
                     echo  $this->formatExportLine($row);
                 }
