@@ -346,7 +346,6 @@ SQL;
             POZOR! - v uctovnickom exporte nesedi suma itemov so sumou platby! 
             [payment#{$invalidPayment->id} {$invalidPayment->amount} vs. 
             [items {$invalidPayment->payment_items_sum}] + 
-            [products {$invalidPayment->payment_products_sum}] + 
             [fees {$invalidPayment->postal_fees_sum}]");
         }
 
@@ -584,7 +583,7 @@ SQL;
             if (isset($form->values['display_order']) && $form->values['display_order']) {
                 $this->redirect(':Products:OrdersAdmin:New', ['paymentId' => $payment->id]);
             }
-            $this->flashMessage('Platba bolo vytvorená.');
+            $this->flashMessage('Platba bola vytvorená.');
             $this->redirect(':Users:UsersAdmin:Show', $payment->user->id);
         };
         $this->factory->onUpdate = function ($form, $payment) {
