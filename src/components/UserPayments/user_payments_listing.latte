@@ -44,9 +44,9 @@
                   {$paymentItem->name} <small>({$paymentItem->count} x {$paymentItem->amount|price})</small>
                 </a>
               {else}
-                <a href="{plink :Payments:PaymentsAdmin:Edit $payment->id, $payment->user_id}" class="list-group-item">
+                <div class="list-group-item">
                   {$paymentItem->name} <small>({$paymentItem->count} x {$paymentItem->amount|price})</small>
-                </a>
+                </div>
               {/if}
             {/foreach}
 
